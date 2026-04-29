@@ -86,7 +86,19 @@ If the output stops mid-sentence or mid-list, increase `--max-tokens`. Debug mod
 
 Once the fast path works, add `--stabilizer` to test the optional repair pass.
 
-### 5. Test the OpenAI-compatible endpoint
+### 5. Compare personalities
+
+Run the same prompt through several saved personality presets:
+
+```bash
+personality-core compare "Explain why retries hide real errors." \
+  --model "ollama/gemma4:e4b" \
+  --max-tokens 260
+```
+
+This is the fastest way to see the core stack idea in motion: same model, same prompt, different resolved behavior.
+
+### 6. Test the OpenAI-compatible endpoint
 
 ```bash
 curl http://127.0.0.1:8787/v1/chat/completions \
@@ -140,6 +152,7 @@ personality-core stack --cores technical_core:0.9,sarcasm_core:0.7,profanity_cor
 personality-core prompt --cores technical_core:0.9,sarcasm_core:0.7
 personality-core demo
 personality-core chat "Why is config drift a problem?" --cores technical_core:0.9,sarcasm_core:0.65 --debug
+personality-core compare "Explain retry loops like I am debugging production."
 personality-core test --model ollama/gemma4:e4b --cores technical_core:0.95,sarcasm_core:0.7 --turns 3
 ```
 

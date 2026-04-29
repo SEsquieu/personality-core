@@ -5,6 +5,7 @@ import json
 import typer
 import uvicorn
 from rich import print
+from rich.panel import Panel
 from personality_core.adapters.base import ModelAdapterError
 from personality_core.config import DEFAULT_CORES_DIR, DEFAULT_PERSONALITIES_DIR, DEFAULT_MODEL_PROFILES_DIR, DEFAULT_MODEL
 from personality_core.core.core_registry import CoreRegistry
@@ -88,7 +89,7 @@ def chat(
         think=think,
     )
     try:
-        result = asyncio.run(PersonalityPipeline(DEFAULT_CORES_DIR, DEFAULT_PERSONALITIES_DIR, DEFAULT_MODEL_PROFILES_DIR).run(req))
+        result = asyncio.run(run_request(req))
     except ModelAdapterError as exc:
         print(f"[red]Model backend error:[/red] {exc}")
         raise typer.Exit(code=1) from exc
@@ -98,6 +99,66 @@ def chat(
     if debug:
         print("\n[bold]Core debug[/bold]")
         print_json(result["debug"])
+
+@app.command()
+def compare(
+    prompt: str = typer.Argument("Explain why retries hide real errors."),
+    model: str = DEFAULT_MODEL,
+    personalities: str = "professional_support,deadpan_debugger,patient_tutor,startup_cofounder,chaos_goblin",
+    max_tokens: int = 260,
+    temperature: float | None = None,
+    think: bool = False,
+    show_prompt: bool = False,
+):
+    """Run one prompt through several personality presets."""
+    selected = [p.strip() for p in personalities.split(",") if p.strip()]
+    if not selected:
+        print("[red]No personalities selected.[/red]")
+        raise typer.Exit(code=1)
+
+    print("[bold]Personality Core comparison[/bold]")
+    print(f"Model: [bold]{model}[/bold]")
+    if show_prompt:
+        print(f"Prompt: {prompt}")
+    print()
+
+    pipeline = PersonalityPipeline(DEFAULT_CORES_DIR, DEFAULT_PERSONALITIES_DIR, DEFAULT_MODEL_PROFILES_DIR)
+    for persona_id in selected:
+        req = ChatCompletionRequest(
+            model=model,
+            messages=[ChatMessage(role="user", content=prompt)],
+            personality=persona_id,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            think=think,
+            debug=True,
+        )
+        try:
+            result = asyncio.run(pipeline.run(req))
+        except KeyError as exc:
+            print(Panel(str(exc), title=f"{persona_id}", border_style="red"))
+            continue
+        except ModelAdapterError as exc:
+            print(Panel(str(exc), title="Model backend error", border_style="red"))
+            raise typer.Exit(code=1) from exc
+
+        debug = result["debug"]
+        evaluation = debug["evaluation"]
+        resolved = debug["resolved"]
+        active = ", ".join(c["id"] for c in resolved["active_cores"])
+        issues = "; ".join(evaluation.get("issues", [])) or "none"
+        warnings = "; ".join(result.get("warnings", [])) or "none"
+        summary = (
+            f"[dim]cores:[/dim] {active}\n"
+            f"[dim]core_match:[/dim] {evaluation['core_match']}  "
+            f"[dim]mode:[/dim] {debug['mode']}  "
+            f"[dim]done:[/dim] {debug.get('model_response', {}).get('done_reason')}\n"
+            f"[dim]issues:[/dim] {issues}\n"
+            f"[dim]warnings:[/dim] {warnings}\n\n"
+            f"{result['content']}"
+        )
+        print(Panel(summary, title=persona_id, border_style="cyan"))
+        print()
 
 @app.command()
 def demo(model: str = DEFAULT_MODEL):
@@ -132,6 +193,9 @@ def demo(model: str = DEFAULT_MODEL):
         print(f'personality-core chat "{prompt_text}" --model "{model}" --cores "{core_spec}" --max-tokens 300 --debug')
         print()
     print("After the fast path works, add --stabilizer to test drift repair.")
+
+async def run_request(req: ChatCompletionRequest) -> dict:
+    return await PersonalityPipeline(DEFAULT_CORES_DIR, DEFAULT_PERSONALITIES_DIR, DEFAULT_MODEL_PROFILES_DIR).run(req)
 
 def parse_core_refs(spec: str) -> list[CoreRef]:
     refs = []

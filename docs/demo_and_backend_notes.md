@@ -71,3 +71,33 @@ personality-core chat "Explain why retries can hide real errors." \
 ```
 
 Once that works, add `--stabilizer` to test drift repair.
+
+## Personality Comparison
+
+`personality-core compare` runs one prompt through several saved personality presets:
+
+```bash
+personality-core compare "Explain why retries hide real errors." \
+  --model "ollama/llama3.2:3b" \
+  --max-tokens 260
+```
+
+Default presets:
+
+- `professional_support`
+- `deadpan_debugger`
+- `patient_tutor`
+- `startup_cofounder`
+- `chaos_goblin`
+
+Each result prints:
+
+- active cores
+- heuristic `core_match`
+- detected mode
+- backend `done_reason`
+- evaluator issues
+- truncation/backend warnings
+- generated response
+
+This command is meant to be the terminal demo for the project: same prompt, same model, different installed core stack.
