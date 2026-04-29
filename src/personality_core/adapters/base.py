@@ -1,9 +1,16 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any
 
 class ModelAdapterError(RuntimeError):
     pass
+
+@dataclass(frozen=True)
+class ModelResponse:
+    content: str
+    done_reason: str | None = None
+    usage: dict[str, Any] | None = None
 
 class ModelAdapter(ABC):
     @abstractmethod
@@ -14,5 +21,5 @@ class ModelAdapter(ABC):
         temperature: float | None = None,
         max_tokens: int | None = None,
         think: bool | str | None = False,
-    ) -> str:
+    ) -> ModelResponse:
         raise NotImplementedError

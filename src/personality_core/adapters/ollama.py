@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any
 import httpx
-from personality_core.adapters.base import ModelAdapter, ModelAdapterError
+from personality_core.adapters.base import ModelAdapter, ModelAdapterError, ModelResponse
 from personality_core.config import OLLAMA_BASE_URL, OLLAMA_TIMEOUT
 
 class OllamaAdapter(ModelAdapter):
@@ -16,7 +16,7 @@ class OllamaAdapter(ModelAdapter):
         temperature: float | None = None,
         max_tokens: int | None = None,
         think: bool | str | None = False,
-    ) -> str:
+    ) -> ModelResponse:
         ollama_model = model.split("/", 1)[1] if model.startswith("ollama/") else model
         options: dict[str, Any] = {}
         if temperature is not None:
@@ -41,7 +41,12 @@ class OllamaAdapter(ModelAdapter):
                         f"think={think!r}.{thinking_note} "
                         "Try --think false, a larger --max-tokens value, a different chat model, or run the command again after the model finishes loading."
                     )
-                return content
+                usage = {
+                    "prompt_eval_count": data.get("prompt_eval_count"),
+                    "eval_count": data.get("eval_count"),
+                    "total_duration": data.get("total_duration"),
+                }
+                return ModelResponse(content=content, done_reason=data.get("done_reason"), usage=usage)
         except httpx.ConnectError as exc:
             raise ModelAdapterError(
                 f"Could not connect to Ollama at {self.base_url}. Start Ollama or pass --model for another supported backend."

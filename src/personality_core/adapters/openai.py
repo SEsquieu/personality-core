@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Any
-from personality_core.adapters.base import ModelAdapter
+from personality_core.adapters.base import ModelAdapter, ModelResponse
 
 class OpenAIAdapter(ModelAdapter):
     async def generate(
@@ -10,5 +10,5 @@ class OpenAIAdapter(ModelAdapter):
         temperature: float | None = None,
         max_tokens: int | None = None,
         think: bool | str | None = False,
-    ) -> str:
+    ) -> ModelResponse:
         raise NotImplementedError("OpenAI adapter placeholder. Use Ollama for the MVP or implement your provider call here.")

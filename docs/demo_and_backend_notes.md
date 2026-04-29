@@ -9,7 +9,7 @@ This project should be easy to try without forcing a single local model setup.
 The generated commands include:
 
 - an explicit `--model`
-- an explicit `--max-tokens 220`
+- an explicit `--max-tokens 300`
 - `--debug` so users can inspect the resolved core stack
 
 The demo intentionally leaves `--stabilizer` off. The stabilizer can trigger a second model call, so users should try it after the fast path works.
@@ -56,6 +56,8 @@ If the response is empty:
 - run the command again after the model finishes loading
 - try a smaller local model for the first demo
 
+If the response starts correctly but cuts off mid-sentence or mid-list, check `debug.model_response.done_reason`. A value of `length` means Ollama hit `num_predict`; increase `--max-tokens`.
+
 ## First-Run Guidance
 
 For a quick check, prefer a small local model and a short output cap:
@@ -64,7 +66,7 @@ For a quick check, prefer a small local model and a short output cap:
 personality-core chat "Explain why retries can hide real errors." \
   --model "ollama/llama3.2:3b" \
   --cores "technical_core:0.9,sarcasm_core:0.5,low_verbosity_core:0.8" \
-  --max-tokens 120 \
+  --max-tokens 180 \
   --debug
 ```
 

@@ -76,11 +76,13 @@ Then run one of the printed examples, or try:
 personality-core chat "Explain why hiding errors behind retries makes debugging miserable." \
   --model "ollama/gemma4:e4b" \
   --cores "technical_core:0.95,sarcasm_core:0.7,profanity_core:0.35,low_verbosity_core:0.75" \
-  --max-tokens 220 \
+  --max-tokens 300 \
   --debug
 ```
 
 Personality Core sends `think: false` to Ollama by default so thinking-capable models use the token budget for visible output. Pass `--think` if you want Ollama reasoning traces enabled.
+
+If the output stops mid-sentence or mid-list, increase `--max-tokens`. Debug mode includes `model_response.done_reason`; `length` means the model hit the output cap.
 
 Once the fast path works, add `--stabilizer` to test the optional repair pass.
 

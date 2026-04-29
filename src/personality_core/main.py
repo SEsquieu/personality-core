@@ -71,7 +71,7 @@ def chat(
     personality: str | None = None,
     stabilizer: bool = False,
     debug: bool = False,
-    max_tokens: int = 220,
+    max_tokens: int = 300,
     temperature: float | None = None,
     think: bool = False,
 ):
@@ -93,6 +93,8 @@ def chat(
         print(f"[red]Model backend error:[/red] {exc}")
         raise typer.Exit(code=1) from exc
     print(result["content"])
+    for warning in result.get("warnings", []):
+        print(f"\n[yellow]Warning:[/yellow] {warning}")
     if debug:
         print("\n[bold]Core debug[/bold]")
         print_json(result["debug"])
@@ -127,7 +129,7 @@ def demo(model: str = DEFAULT_MODEL):
     print("Override with --model or set PERSONALITY_CORE_DEFAULT_MODEL.\n")
     for name, core_spec, prompt_text in examples:
         print(f"[bold]{name}[/bold]")
-        print(f'personality-core chat "{prompt_text}" --model "{model}" --cores "{core_spec}" --max-tokens 220 --debug')
+        print(f'personality-core chat "{prompt_text}" --model "{model}" --cores "{core_spec}" --max-tokens 300 --debug')
         print()
     print("After the fast path works, add --stabilizer to test drift repair.")
 

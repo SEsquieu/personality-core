@@ -36,7 +36,8 @@ class PersonalityPipeline:
         system_prompt = self.compiler.compile(resolved, mode=mode, model=req.model)
         outbound = [{"role": "system", "content": system_prompt}] + messages
         adapter = self.adapter_for(req.model)
-        raw = await adapter.generate(req.model, outbound, temperature=req.temperature, max_tokens=req.max_tokens, think=req.think)
+        raw_response = await adapter.generate(req.model, outbound, temperature=req.temperature, max_tokens=req.max_tokens, think=req.think)
+        raw = raw_response.content
         evaluation = score_text(raw, resolved)
         stabilizer_cfg = req.stabilizer
         enabled = bool(req.repair)
@@ -51,9 +52,26 @@ class PersonalityPipeline:
         if enabled and evaluation["core_match"] < threshold:
             repair_messages = self.stabilizer.build_repair_messages(messages, raw, resolved, evaluation)
             try:
-                final = await adapter.generate(req.model, repair_messages, temperature=0.2, max_tokens=req.max_tokens, think=req.think)
+                repair_response = await adapter.generate(req.model, repair_messages, temperature=0.2, max_tokens=req.max_tokens, think=req.think)
+                final = repair_response.content
                 repaired = True
                 evaluation = score_text(final, resolved)
             except Exception:
                 final = raw
-        return {"content": final, "raw_content": raw, "repaired": repaired, "debug": {"mode": mode, "resolved": resolved.model_dump(), "compiled_prompt": system_prompt, "evaluation": evaluation}}
+        warnings = []
+        if raw_response.done_reason == "length":
+            warnings.append("Model output stopped because it hit max_tokens. Increase --max-tokens for a complete answer.")
+        return {
+            "content": final,
+            "raw_content": raw,
+            "repaired": repaired,
+            "warnings": warnings,
+            "debug": {
+                "mode": mode,
+                "resolved": resolved.model_dump(),
+                "compiled_prompt": system_prompt,
+                "evaluation": evaluation,
+                "model_response": {"done_reason": raw_response.done_reason, "usage": raw_response.usage},
+                "warnings": warnings,
+            },
+        }
