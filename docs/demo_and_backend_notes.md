@@ -14,6 +14,8 @@ The generated commands include:
 
 The demo intentionally leaves `--stabilizer` off. The stabilizer can trigger a second model call, so users should try it after the fast path works.
 
+Personality Core sends `think: false` to Ollama by default. This keeps the first-run demo focused on visible assistant output instead of spending the token budget on a hidden reasoning trace.
+
 ## Model Selection
 
 The default model is controlled by `PERSONALITY_CORE_DEFAULT_MODEL`.
@@ -49,7 +51,8 @@ If Ollama returns an empty assistant message, Personality Core treats that as a 
 If the response is empty:
 
 - confirm the model is a chat-capable Ollama model
-- try a smaller `--max-tokens` value
+- leave thinking disabled, or pass `--think` only after the fast path works
+- try a larger `--max-tokens` value if `done='length'`
 - run the command again after the model finishes loading
 - try a smaller local model for the first demo
 

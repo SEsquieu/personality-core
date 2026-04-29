@@ -26,6 +26,7 @@ class ChatCompletionRequest(BaseModel):
     debug: bool = False
     temperature: float | None = None
     max_tokens: int | None = None
+    think: bool | str | None = False
     stream: bool = False
 
 class CoreDefinition(BaseModel):

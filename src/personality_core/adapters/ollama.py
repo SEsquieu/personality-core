@@ -9,7 +9,14 @@ class OllamaAdapter(ModelAdapter):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
-    async def generate(self, model: str, messages: list[dict[str, Any]], temperature: float | None = None, max_tokens: int | None = None) -> str:
+    async def generate(
+        self,
+        model: str,
+        messages: list[dict[str, Any]],
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        think: bool | str | None = False,
+    ) -> str:
         ollama_model = model.split("/", 1)[1] if model.startswith("ollama/") else model
         options: dict[str, Any] = {}
         if temperature is not None:
@@ -17,6 +24,8 @@ class OllamaAdapter(ModelAdapter):
         if max_tokens is not None:
             options["num_predict"] = max_tokens
         payload = {"model": ollama_model, "messages": messages, "stream": False, "options": options}
+        if think is not None:
+            payload["think"] = think
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 resp = await client.post(f"{self.base_url}/api/chat", json=payload)
@@ -25,9 +34,12 @@ class OllamaAdapter(ModelAdapter):
                 content = data.get("message", {}).get("content", "")
                 if not content.strip():
                     reason = data.get("done_reason") or data.get("done")
+                    thinking = data.get("message", {}).get("thinking")
+                    thinking_note = " The model returned thinking text but no visible answer." if thinking else ""
                     raise ModelAdapterError(
                         f"Ollama returned an empty message for {ollama_model}. done={reason!r}. "
-                        "Try a smaller --max-tokens value, a different chat model, or run the command again after the model finishes loading."
+                        f"think={think!r}.{thinking_note} "
+                        "Try --think false, a larger --max-tokens value, a different chat model, or run the command again after the model finishes loading."
                     )
                 return content
         except httpx.ConnectError as exc:

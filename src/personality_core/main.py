@@ -73,6 +73,7 @@ def chat(
     debug: bool = False,
     max_tokens: int = 220,
     temperature: float | None = None,
+    think: bool = False,
 ):
     """Run one prompt through a core stack without starting the HTTP server."""
     req = ChatCompletionRequest(
@@ -84,6 +85,7 @@ def chat(
         debug=debug,
         max_tokens=max_tokens,
         temperature=temperature,
+        think=think,
     )
     try:
         result = asyncio.run(PersonalityPipeline(DEFAULT_CORES_DIR, DEFAULT_PERSONALITIES_DIR, DEFAULT_MODEL_PROFILES_DIR).run(req))

@@ -36,7 +36,7 @@ class PersonalityPipeline:
         system_prompt = self.compiler.compile(resolved, mode=mode, model=req.model)
         outbound = [{"role": "system", "content": system_prompt}] + messages
         adapter = self.adapter_for(req.model)
-        raw = await adapter.generate(req.model, outbound, temperature=req.temperature, max_tokens=req.max_tokens)
+        raw = await adapter.generate(req.model, outbound, temperature=req.temperature, max_tokens=req.max_tokens, think=req.think)
         evaluation = score_text(raw, resolved)
         stabilizer_cfg = req.stabilizer
         enabled = bool(req.repair)
@@ -51,7 +51,7 @@ class PersonalityPipeline:
         if enabled and evaluation["core_match"] < threshold:
             repair_messages = self.stabilizer.build_repair_messages(messages, raw, resolved, evaluation)
             try:
-                final = await adapter.generate(req.model, repair_messages, temperature=0.2, max_tokens=req.max_tokens)
+                final = await adapter.generate(req.model, repair_messages, temperature=0.2, max_tokens=req.max_tokens, think=req.think)
                 repaired = True
                 evaluation = score_text(final, resolved)
             except Exception:

@@ -80,6 +80,8 @@ personality-core chat "Explain why hiding errors behind retries makes debugging 
   --debug
 ```
 
+Personality Core sends `think: false` to Ollama by default so thinking-capable models use the token budget for visible output. Pass `--think` if you want Ollama reasoning traces enabled.
+
 Once the fast path works, add `--stabilizer` to test the optional repair pass.
 
 ### 5. Test the OpenAI-compatible endpoint
