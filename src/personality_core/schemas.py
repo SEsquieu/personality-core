@@ -49,4 +49,5 @@ class ResolvedStack(BaseModel):
     boundaries: dict[str, bool] = Field(default_factory=dict)
     rules: list[str] = Field(default_factory=list)
     active_cores: list[dict[str, Any]] = Field(default_factory=list)
+    core_trace: list[dict[str, Any]] = Field(default_factory=list)
     conflicts: list[dict[str, Any]] = Field(default_factory=list)

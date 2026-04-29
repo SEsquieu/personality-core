@@ -31,14 +31,32 @@ python -m venv .venv
 pip install -e .
 ```
 
-### 2. Start Ollama
+For development and tests:
+
+```bash
+pip install -e ".[dev]"
+```
+
+### 2. Choose a model backend
+
+Ollama works out of the box:
 
 ```bash
 ollama serve
 ollama pull gemma4:e4b
 ```
 
-Any Ollama model should work. If you use a different model, change the `model` field in the request.
+Any Ollama chat model should work. Use the `ollama/` prefix when passing it to Personality Core:
+
+```bash
+personality-core chat "Why is config drift a problem?" --model "ollama/gemma4:e4b"
+```
+
+You can set a different default model:
+
+```bash
+PERSONALITY_CORE_DEFAULT_MODEL=ollama/llama3.2:3b
+```
 
 ### 3. Run Personality Core
 
@@ -46,7 +64,25 @@ Any Ollama model should work. If you use a different model, change the `model` f
 personality-core serve --host 127.0.0.1 --port 8787
 ```
 
-### 4. Test it
+### 4. Try a personality stack from the terminal
+
+```bash
+personality-core demo
+```
+
+Then run one of the printed examples, or try:
+
+```bash
+personality-core chat "Explain why hiding errors behind retries makes debugging miserable." \
+  --model "ollama/gemma4:e4b" \
+  --cores "technical_core:0.95,sarcasm_core:0.7,profanity_core:0.35,low_verbosity_core:0.75" \
+  --max-tokens 220 \
+  --debug
+```
+
+Once the fast path works, add `--stabilizer` to test the optional repair pass.
+
+### 5. Test the OpenAI-compatible endpoint
 
 ```bash
 curl http://127.0.0.1:8787/v1/chat/completions \
@@ -98,7 +134,24 @@ personality-core inspect sarcasm_core
 personality-core validate cores/sarcasm_core.json
 personality-core stack --cores technical_core:0.9,sarcasm_core:0.7,profanity_core:0.3
 personality-core prompt --cores technical_core:0.9,sarcasm_core:0.7
+personality-core demo
+personality-core chat "Why is config drift a problem?" --cores technical_core:0.9,sarcasm_core:0.65 --debug
 personality-core test --model ollama/gemma4:e4b --cores technical_core:0.95,sarcasm_core:0.7 --turns 3
+```
+
+## Configuration
+
+By default, the CLI and server load local assets from `cores/`, `personalities/`, and `model_profiles/`.
+
+You can override those paths when embedding Personality Core in another project:
+
+```bash
+PERSONALITY_CORE_CORES_DIR=/path/to/cores
+PERSONALITY_CORE_PERSONALITIES_DIR=/path/to/personalities
+PERSONALITY_CORE_MODEL_PROFILES_DIR=/path/to/model_profiles
+PERSONALITY_CORE_DEFAULT_MODEL=ollama/gemma4:e4b
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_TIMEOUT=300
 ```
 
 ## Core files

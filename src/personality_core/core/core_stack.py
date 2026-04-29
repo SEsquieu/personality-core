@@ -27,6 +27,7 @@ class CoreStackResolver:
         boundaries: dict[str, bool] = {}
         rules: list[str] = []
         active: list[dict[str, Any]] = []
+        core_trace: list[dict[str, Any]] = []
         conflicts: list[dict[str, Any]] = []
         installed_ids = [c.id for c in core_refs]
 
@@ -34,8 +35,11 @@ class CoreStackResolver:
             core = self.registry.get(ref.id)
             strength = core.default_strength if ref.strength is None else max(0.0, min(1.0, ref.strength))
             merged_params = {**core.params, **(ref.params or {})}
+            trait_effects: dict[str, float] = {}
             for trait, delta in core.trait_deltas.items():
-                resolved[trait] = resolved.get(trait, 0.5) + (delta * strength)
+                effect = delta * strength
+                trait_effects[trait] = round(effect, 3)
+                resolved[trait] = resolved.get(trait, 0.5) + effect
             for key, value in core.boundaries.items():
                 boundaries[key] = bool(boundaries.get(key, False) or value)
             rules.extend(core.rules)
@@ -44,7 +48,8 @@ class CoreStackResolver:
                 if other in installed_ids:
                     conflicts.append({"cores": [core.id, other], "severity": "medium", "reason": conflict.get("reason", "Potential tone conflict."), "resolution": "allow_with_constraints"})
             active.append({"id": core.id, "name": core.name, "strength": strength, "params": merged_params})
+            core_trace.append({"id": core.id, "name": core.name, "strength": strength, "trait_effects": trait_effects})
 
         for trait, val in list(resolved.items()):
             resolved[trait] = max(0.0, min(1.0, val))
-        return ResolvedStack(base_traits=base, resolved_traits=resolved, boundaries=boundaries, rules=rules, active_cores=active, conflicts=conflicts)
+        return ResolvedStack(base_traits=base, resolved_traits=resolved, boundaries=boundaries, rules=rules, active_cores=active, core_trace=core_trace, conflicts=conflicts)

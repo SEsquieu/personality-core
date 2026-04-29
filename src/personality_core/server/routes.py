@@ -1,6 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
+from personality_core.adapters.base import ModelAdapterError
 from personality_core.schemas import ChatCompletionRequest
 from personality_core.core.pipeline import PersonalityPipeline
 from personality_core.config import DEFAULT_CORES_DIR, DEFAULT_PERSONALITIES_DIR, DEFAULT_MODEL_PROFILES_DIR
@@ -25,6 +26,8 @@ async def chat(req: ChatCompletionRequest):
         result = await pipeline.run(req)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ModelAdapterError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return chat_completion_response(req.model, result["content"], debug=result["debug"] if req.debug else None)
