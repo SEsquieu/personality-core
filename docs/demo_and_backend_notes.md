@@ -44,6 +44,15 @@ OLLAMA_TIMEOUT=300
 
 If Ollama is unavailable or too slow, the CLI now prints a short backend error instead of a raw `httpx` traceback.
 
+If Ollama returns an empty assistant message, Personality Core treats that as a backend error. A normal `chat` run should print the assistant response first, then print `Core debug` when `--debug` is enabled.
+
+If the response is empty:
+
+- confirm the model is a chat-capable Ollama model
+- try a smaller `--max-tokens` value
+- run the command again after the model finishes loading
+- try a smaller local model for the first demo
+
 ## First-Run Guidance
 
 For a quick check, prefer a small local model and a short output cap:

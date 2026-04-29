@@ -22,7 +22,14 @@ class OllamaAdapter(ModelAdapter):
                 resp = await client.post(f"{self.base_url}/api/chat", json=payload)
                 resp.raise_for_status()
                 data = resp.json()
-                return data.get("message", {}).get("content", "")
+                content = data.get("message", {}).get("content", "")
+                if not content.strip():
+                    reason = data.get("done_reason") or data.get("done")
+                    raise ModelAdapterError(
+                        f"Ollama returned an empty message for {ollama_model}. done={reason!r}. "
+                        "Try a smaller --max-tokens value, a different chat model, or run the command again after the model finishes loading."
+                    )
+                return content
         except httpx.ConnectError as exc:
             raise ModelAdapterError(
                 f"Could not connect to Ollama at {self.base_url}. Start Ollama or pass --model for another supported backend."
