@@ -1,0 +1,21 @@
+{
+  "id": "openai/default",
+  "provider": "openai",
+  "model": "default",
+  "supports_system_prompt": true,
+  "supports_streaming": false,
+  "supports_json_mode": true,
+  "context_window": 128000,
+  "compiler_hints": {
+    "needs_explicit_boundaries": false,
+    "repeat_style_constraints": false,
+    "avoid_abstract_slider_language": true,
+    "style_instruction_strength": 0.9
+  },
+  "trait_calibration": {
+    "sarcasm_multiplier": 0.9,
+    "profanity_multiplier": 0.9,
+    "verbosity_multiplier": 1.0,
+    "warmth_multiplier": 1.0
+  }
+}

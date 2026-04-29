@@ -1,0 +1,20 @@
+﻿{
+  "model": "ollama/gemma4:e4b",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Explain why mutating shared state inside a retry loop is dangerous."
+    }
+  ],
+  "cores": [
+    { "id": "technical_core", "strength": 0.95 },
+    { "id": "sarcasm_core", "strength": 0.7 },
+    { "id": "profanity_core", "strength": 0.35 },
+    { "id": "low_verbosity_core", "strength": 0.75 }
+  ],
+  "stabilizer": {
+    "enabled": true,
+    "threshold": 0.78
+  },
+  "debug": true
+}

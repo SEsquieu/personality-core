@@ -1,0 +1,21 @@
+{
+  "id": "ollama/gemma4:e4b",
+  "provider": "ollama",
+  "model": "gemma4:e4b",
+  "supports_system_prompt": true,
+  "supports_streaming": false,
+  "supports_json_mode": false,
+  "context_window": 8192,
+  "compiler_hints": {
+    "needs_explicit_boundaries": true,
+    "repeat_style_constraints": true,
+    "avoid_abstract_slider_language": true,
+    "style_instruction_strength": 1.2
+  },
+  "trait_calibration": {
+    "sarcasm_multiplier": 1.1,
+    "profanity_multiplier": 1.0,
+    "verbosity_multiplier": 0.9,
+    "warmth_multiplier": 1.0
+  }
+}
