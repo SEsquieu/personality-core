@@ -22,7 +22,7 @@ class PersonalityPipeline:
         self.openai = OpenAIAdapter()
 
     def adapter_for(self, model: str):
-        if model.startswith("ollama/"):
+        if model.startswith("ollama/") or "/" not in model:
             return self.ollama
         return self.openai
 

@@ -59,6 +59,8 @@ POST /v1/cores/draft
 
 When `model` is present, the backend calls that model adapter and asks for strict core JSON. When `model` is omitted, the backend uses the deterministic draft path.
 
+The workbench sends the currently selected runtime model. Ollama models can be written as either `ollama/gemma4:e4b` or the bare local model name `gemma4:e4b`.
+
 Validate:
 
 ```http

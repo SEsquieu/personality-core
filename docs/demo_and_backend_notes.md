@@ -31,11 +31,12 @@ Users can override the model per command:
 ```bash
 personality-core demo --model "ollama/llama3.2:3b"
 personality-core chat "Why is config drift painful?" --model "ollama/llama3.2:3b"
+personality-core chat "Why is config drift painful?" --model "llama3.2:3b"
 ```
 
 ## Ollama Behavior
 
-Models with the `ollama/` prefix route through the Ollama adapter.
+Models with the `ollama/` prefix route through the Ollama adapter. Bare local model names such as `llama3.2:3b` also route through Ollama so the workbench behaves naturally for local-model users.
 
 Relevant environment variables:
 

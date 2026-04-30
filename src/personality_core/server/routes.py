@@ -288,10 +288,71 @@ async def build_model_core_draft(req: CoreDraftRequest):
     data = parse_json_object(response.content)
     if not isinstance(data, dict):
         raise ValueError("response JSON was not an object")
+    data = normalize_model_core_data(data, req, name, intent)
+    return pipeline.registry.validate_definition(data, source="model draft")
+
+def normalize_model_core_data(data: dict, req: CoreDraftRequest, name: str, intent: str) -> dict:
     data["id"] = slugify(str(data.get("id") or name))
     data["name"] = str(data.get("name") or name)
+    data["version"] = str(data.get("version") or "0.1.0")
+    data["description"] = str(data.get("description") or intent[:180])
     data["author"] = str(data.get("author") or req.author)
-    return pipeline.registry.validate_definition(data, source="model draft")
+
+    trait_deltas = data.get("trait_deltas")
+    if not isinstance(trait_deltas, dict):
+        trait_deltas = {"directness": 0.2, "clarity": 0.4}
+    data["trait_deltas"] = {
+        str(trait): max(-1.0, min(1.0, float(value)))
+        for trait, value in trait_deltas.items()
+        if isinstance(value, int | float)
+    } or {"directness": 0.2, "clarity": 0.4}
+
+    try:
+        data["default_strength"] = max(0.0, min(1.0, float(data.get("default_strength", 0.65))))
+    except (TypeError, ValueError):
+        data["default_strength"] = 0.65
+
+    if not isinstance(data.get("params"), dict):
+        data["params"] = {}
+    data["rules"] = [str(rule) for rule in data.get("rules", []) if str(rule).strip()] or [
+        "Preserve task accuracy over style.",
+        "Keep the behavior useful and inspectable.",
+    ]
+    boundaries = data.get("boundaries")
+    if not isinstance(boundaries, dict):
+        boundaries = {}
+    data["boundaries"] = {
+        str(key): bool(value)
+        for key, value in boundaries.items()
+    } | {
+        "preserve_task_accuracy": True,
+        "no_personal_attacks": True,
+        "no_slurs": True,
+    }
+
+    weights = data.get("evaluation_weights")
+    if not isinstance(weights, dict):
+        weights = {"clarity": 0.8}
+    data["evaluation_weights"] = {
+        str(weight): max(0.0, min(1.0, float(value)))
+        for weight, value in weights.items()
+        if isinstance(value, int | float)
+    } or {"clarity": 0.8}
+
+    conflicts = []
+    for item in data.get("conflicts_with", []) if isinstance(data.get("conflicts_with"), list) else []:
+        if isinstance(item, dict):
+            conflicts.append({str(key): str(value) for key, value in item.items()})
+        elif str(item).strip():
+            conflicts.append({"core": str(item), "reason": "Model-reported conflict."})
+    data["conflicts_with"] = conflicts
+
+    examples = []
+    for item in data.get("examples", []) if isinstance(data.get("examples"), list) else []:
+        if isinstance(item, dict):
+            examples.append({str(key): str(value) for key, value in item.items()})
+    data["examples"] = examples
+    return data
 
 def parse_json_object(text: str):
     stripped = text.strip()
