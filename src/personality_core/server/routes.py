@@ -266,6 +266,8 @@ def build_core_draft(req: CoreDraftRequest):
             "no_slurs": True,
         },
         "evaluation_weights": {"clarity": 0.8},
+        "contracts": [],
+        "mutations": [],
         "conflicts_with": [],
         "examples": [{"input": "Apply this behavior to a normal user request.", "ideal_style": intent[:120]}],
     }
@@ -302,6 +304,17 @@ def build_core_template():
             "directness": 0.6,
             "technicality": 0.4,
         },
+        "contracts": [],
+        "mutations": [
+            {
+                "type": "replace_terms",
+                "rate": 1.0,
+                "whole_words": True,
+                "preserve_case": True,
+                "terms": {"customer": "member", "issue": "case"},
+                "instructions": ["Optional example mutation: enforce preferred terminology."],
+            }
+        ],
         "conflicts_with": [],
         "examples": [
             {
@@ -332,6 +345,8 @@ async def build_model_core_draft(req: CoreDraftRequest):
         "- trait_deltas values must be numbers from -1.0 to 1.0.\n"
         "- default_strength must be from 0.0 to 1.0.\n"
         "- rules should describe observable behavior, not vague personality labels.\n"
+        "- mutations should describe runtime-executable behavior transforms when the intent asks for concrete lexical or format changes.\n"
+        "- use replace_terms mutations for requests that ask for concrete lexical substitutions or house terminology.\n"
         "- boundaries should preserve task accuracy and avoid abusive behavior.\n\n"
         f"Core name: {name}\n"
         f"Intent: {intent}\n"
@@ -401,6 +416,9 @@ def normalize_model_core_data(data: dict, req: CoreDraftRequest, name: str, inte
         if isinstance(value, int | float)
     } or {"clarity": 0.8}
 
+    data["contracts"] = normalize_dict_list(data.get("contracts"))
+    data["mutations"] = normalize_dict_list(data.get("mutations"))
+
     conflicts = []
     for item in data.get("conflicts_with", []) if isinstance(data.get("conflicts_with"), list) else []:
         if isinstance(item, dict):
@@ -415,6 +433,14 @@ def normalize_model_core_data(data: dict, req: CoreDraftRequest, name: str, inte
             examples.append({str(key): str(value) for key, value in item.items()})
     data["examples"] = examples
     return data
+
+def normalize_dict_list(value: object) -> list[dict[str, object]]:
+    items = value if isinstance(value, list) else []
+    normalized = []
+    for item in items:
+        if isinstance(item, dict):
+            normalized.append({str(key): val for key, val in item.items()})
+    return normalized
 
 def parse_json_object(text: str):
     stripped = text.strip()

@@ -41,6 +41,7 @@ The goal is not to pretend the model has a stable inner personality. The goal is
 - model-specific prompt compiler
 - heuristic style evaluator
 - behavior contract evaluator
+- runtime mutation engine for concrete behavior transforms
 - optional stabilizer/repair pass
 - CLI for local inspection and demos
 - React workbench for stack editing, provider testing, comparison, and core creation
@@ -193,6 +194,31 @@ Contract fail policies:
 
 See [docs/behavior_contracts.md](docs/behavior_contracts.md).
 
+## Runtime Mutations
+
+Some behavior should be executable, not just suggested. Runtime mutations let a core apply backend transforms after the model call while still scaling with stack strength.
+
+For example, a team could define a terminology core with a `replace_terms` mutation:
+
+```json
+{
+  "id": "terminology_core",
+  "kind": "style",
+  "mutations": [
+    {
+      "type": "replace_terms",
+      "rate": 1.0,
+      "terms": {
+        "customer": "member",
+        "issue": "case"
+      }
+    }
+  ]
+}
+```
+
+At lower core strengths, the mutation applies to fewer occurrences. See [docs/runtime_mutations.md](docs/runtime_mutations.md).
+
 ## Provider Routing
 
 Model prefixes select the provider:
@@ -254,7 +280,7 @@ The React workbench is designed for interactive development:
 - **Compare**: run the same prompt through saved presets
 - **Core Creator**: draft and validate new cores
 - **Runtime**: choose provider model, test provider, choose contract fail policy
-- **Diagnostics**: inspect resolved traits, core scores, conflicts, contracts, and trace
+- **Diagnostics**: inspect resolved traits, core scores, conflicts, contracts, mutations, and trace
 
 See [docs/frontend_workbench.md](docs/frontend_workbench.md).
 
@@ -338,6 +364,7 @@ Near-term priorities:
 
 - [Provider setup](docs/provider_setup.md)
 - [Behavior contracts](docs/behavior_contracts.md)
+- [Runtime mutations](docs/runtime_mutations.md)
 - [Core creator](docs/core_creator.md)
 - [Stack workflow](docs/stack_workflow.md)
 - [Frontend workbench](docs/frontend_workbench.md)

@@ -9,6 +9,7 @@ from personality_core.core.compiler import CoreCompiler
 from personality_core.scoring.heuristic import score_text
 from personality_core.scoring.contracts import evaluate_contracts
 from personality_core.core.stabilizer import Stabilizer
+from personality_core.core.mutations import apply_mutations
 from personality_core.adapters.ollama import OllamaAdapter
 from personality_core.adapters.openai import OpenAIAdapter
 from personality_core.config import (
@@ -60,8 +61,9 @@ class PersonalityPipeline:
         adapter = self.adapter_for(req.model)
         raw_response = await adapter.generate(req.model, outbound, temperature=req.temperature, max_tokens=req.max_tokens, think=req.think)
         raw = raw_response.content
-        evaluation = score_text(raw, resolved)
-        contract_evaluation = evaluate_contracts(raw, resolved)
+        mutated, mutation_report = apply_mutations(raw, resolved)
+        evaluation = score_text(mutated, resolved)
+        contract_evaluation = evaluate_contracts(mutated, resolved)
         stabilizer_cfg = req.stabilizer
         enabled = bool(req.repair)
         threshold = 0.78
@@ -70,7 +72,7 @@ class PersonalityPipeline:
         elif stabilizer_cfg is not None:
             enabled = stabilizer_cfg.enabled
             threshold = stabilizer_cfg.threshold
-        final = raw
+        final = mutated
         repaired = False
         blocked = False
         warnings = []
@@ -81,12 +83,12 @@ class PersonalityPipeline:
             final = ""
             blocked = True
         elif contract_evaluation["repair_needed"] and contract_policy == "raw":
-            final = raw
+            final = mutated
         elif contract_evaluation["repair_needed"] and contract_policy == "repair":
-            repair_messages = self.stabilizer.build_contract_repair_messages(messages, raw, resolved, contract_evaluation)
+            repair_messages = self.stabilizer.build_contract_repair_messages(messages, mutated, resolved, contract_evaluation)
             try:
                 repair_response = await adapter.generate(req.model, repair_messages, temperature=0.1, max_tokens=req.max_tokens, think=req.think)
-                final = repair_response.content
+                final, mutation_report = apply_mutations(repair_response.content, resolved)
                 repaired = True
                 contract_evaluation = evaluate_contracts(final, resolved)
                 if contract_evaluation["repair_needed"]:
@@ -97,12 +99,12 @@ class PersonalityPipeline:
             repair_messages = self.stabilizer.build_repair_messages(messages, final, resolved, evaluation)
             try:
                 repair_response = await adapter.generate(req.model, repair_messages, temperature=0.2, max_tokens=req.max_tokens, think=req.think)
-                final = repair_response.content
+                final, mutation_report = apply_mutations(repair_response.content, resolved)
                 repaired = True
                 evaluation = score_text(final, resolved)
                 contract_evaluation = evaluate_contracts(final, resolved)
             except Exception:
-                final = raw
+                final = mutated
         if raw_response.done_reason == "length":
             warnings.append("Model output stopped because it hit max_tokens. Increase --max-tokens for a complete answer.")
         return {
@@ -117,6 +119,7 @@ class PersonalityPipeline:
                 "compiled_prompt": system_prompt,
                 "evaluation": evaluation,
                 "contract_evaluation": contract_evaluation,
+                "mutation_report": mutation_report,
                 "fail_policy": contract_policy,
                 "model_response": {"done_reason": raw_response.done_reason, "usage": raw_response.usage},
                 "warnings": warnings,

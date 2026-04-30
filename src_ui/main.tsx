@@ -36,6 +36,7 @@ type ResolvedStack = {
   core_trace: Array<{ id: string; name: string; strength: number; trait_effects: Record<string, number> }>;
   conflicts: Array<{ cores: string[]; reason: string; resolution: string }>;
   contracts: Array<Record<string, unknown>>;
+  mutations: Array<Record<string, unknown>>;
 };
 
 type RunResult = {
@@ -54,6 +55,10 @@ type RunResult = {
       ok: boolean;
       repair_needed: boolean;
       issues: string[];
+    };
+    mutation_report?: {
+      changed: boolean;
+      applied: Array<Record<string, unknown>>;
     };
     fail_policy?: string;
     model_response: {
@@ -110,6 +115,20 @@ const CORE_TEMPLATE = {
     directness: 0.6,
     technicality: 0.4
   },
+  contracts: [],
+  mutations: [
+    {
+      type: "replace_terms",
+      rate: 1,
+      whole_words: true,
+      preserve_case: true,
+      terms: {
+        customer: "member",
+        issue: "case"
+      },
+      instructions: ["Optional example mutation: enforce preferred terminology."]
+    }
+  ],
   conflicts_with: [],
   examples: [
     {
@@ -584,6 +603,18 @@ function App() {
               </section>
             )}
 
+            {activeResolved.mutations.length > 0 && (
+              <section className="diag-section">
+                <h3>Mutations</h3>
+                {activeResolved.mutations.map((mutation, index) => (
+                  <div className="conflict-row" key={`${mutation.core_id}-${index}`}>
+                    <strong>{String(mutation.core_name ?? mutation.core_id ?? "mutation")}</strong>
+                    <span>{String(mutation.type ?? "behavior")}</span>
+                  </div>
+                ))}
+              </section>
+            )}
+
             <section className="diag-section">
               <h3>Core Trace</h3>
               {activeResolved.core_trace.map((trace) => (
@@ -901,6 +932,12 @@ function StackOutput({ result, compiledPrompt }: { result: RunResult | null; com
         <details className="compiled-prompt">
           <summary>Contract Issues</summary>
           <pre>{result.debug.contract_evaluation.issues.join("\n")}</pre>
+        </details>
+      ) : null}
+      {result?.debug?.mutation_report?.applied?.length ? (
+        <details className="compiled-prompt">
+          <summary>Mutation Report</summary>
+          <pre>{JSON.stringify(result.debug.mutation_report, null, 2)}</pre>
         </details>
       ) : null}
       {compiledPrompt && (

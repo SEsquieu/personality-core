@@ -73,6 +73,18 @@ class CoreCompiler:
                         lines.append("  JSON schema: " + json.dumps(schema, separators=(",", ":")))
                 for instruction in contract.get("instructions", [])[:4]:
                     lines.append(f"  {instruction}")
+        if resolved.mutations:
+            lines.append("Runtime behavior mutations:")
+            for mutation in resolved.mutations[:8]:
+                mutation_type = mutation.get("type", "mutation")
+                lines.append(f"- {mutation.get('core_name', mutation.get('core_id', 'core'))}: {mutation_type} at strength {float(mutation.get('strength', 1.0)):.2f}")
+                if mutation_type == "replace_terms":
+                    terms = mutation.get("terms", {})
+                    if isinstance(terms, dict):
+                        pairs = ", ".join(f"{source}->{target}" for source, target in list(terms.items())[:8])
+                        lines.append(f"  Prefer these lexical replacements naturally: {pairs}.")
+                for instruction in mutation.get("instructions", [])[:4]:
+                    lines.append(f"  {instruction}")
         if resolved.boundaries:
             lines.append("Hard boundaries:")
             for k, v in resolved.boundaries.items():

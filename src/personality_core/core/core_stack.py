@@ -27,6 +27,7 @@ class CoreStackResolver:
         boundaries: dict[str, bool] = {}
         rules: list[str] = []
         contracts: list[dict[str, Any]] = []
+        mutations: list[dict[str, Any]] = []
         active: list[dict[str, Any]] = []
         core_trace: list[dict[str, Any]] = []
         conflicts: list[dict[str, Any]] = []
@@ -46,6 +47,8 @@ class CoreStackResolver:
             rules.extend(core.rules)
             for contract in core.contracts:
                 contracts.append({**contract, "core_id": core.id, "core_name": core.name, "strength": strength})
+            for mutation in core.mutations:
+                mutations.append({**mutation, "core_id": core.id, "core_name": core.name, "strength": strength})
             for conflict in core.conflicts_with:
                 other = conflict.get("core_id")
                 if other in installed_ids:
@@ -55,4 +58,4 @@ class CoreStackResolver:
 
         for trait, val in list(resolved.items()):
             resolved[trait] = max(0.0, min(1.0, val))
-        return ResolvedStack(base_traits=base, resolved_traits=resolved, boundaries=boundaries, rules=rules, contracts=contracts, active_cores=active, core_trace=core_trace, conflicts=conflicts)
+        return ResolvedStack(base_traits=base, resolved_traits=resolved, boundaries=boundaries, rules=rules, contracts=contracts, mutations=mutations, active_cores=active, core_trace=core_trace, conflicts=conflicts)

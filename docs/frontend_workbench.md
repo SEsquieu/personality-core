@@ -61,6 +61,8 @@ The Runtime panel exposes provider model examples and a `Test Provider` check so
 
 The Runtime panel also exposes contract fail policy. For contract cores such as `structured_json_output_core`, users can choose whether drift should warn, repair, block, or return raw output.
 
+Diagnostics include active contracts and runtime mutations so users can see which behavior is being prompted, evaluated, or applied by the backend.
+
 The core interaction is:
 
 ```text

@@ -85,6 +85,7 @@ class CoreDefinition(BaseModel):
     boundaries: dict[str, bool] = Field(default_factory=dict)
     evaluation_weights: dict[str, float] = Field(default_factory=dict)
     contracts: list[dict[str, Any]] = Field(default_factory=list)
+    mutations: list[dict[str, Any]] = Field(default_factory=list)
     conflicts_with: list[dict[str, str]] = Field(default_factory=list)
     examples: list[dict[str, str]] = Field(default_factory=list)
 
@@ -94,6 +95,7 @@ class ResolvedStack(BaseModel):
     boundaries: dict[str, bool] = Field(default_factory=dict)
     rules: list[str] = Field(default_factory=list)
     contracts: list[dict[str, Any]] = Field(default_factory=list)
+    mutations: list[dict[str, Any]] = Field(default_factory=list)
     active_cores: list[dict[str, Any]] = Field(default_factory=list)
     core_trace: list[dict[str, Any]] = Field(default_factory=list)
     conflicts: list[dict[str, Any]] = Field(default_factory=list)

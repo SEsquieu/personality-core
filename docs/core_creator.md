@@ -132,6 +132,7 @@ Field guide:
 - `boundaries`: hard limits that should survive personality styling
 - `evaluation_weights`: scoring hints for drift checks
 - `contracts`: machine-checkable output requirements, such as valid JSON shape
+- `mutations`: backend-applied behavior transforms, such as replacing terms or enforcing house vocabulary
 - `examples`: style anchors for humans today, and richer evaluators later
 
 ## Safety
