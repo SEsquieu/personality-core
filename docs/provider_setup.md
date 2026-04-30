@@ -12,7 +12,7 @@ personality-core serve --host 127.0.0.1 --port 8787
 npm run dev
 ```
 
-Open the workbench and use `Runtime -> Test Provider` before running a stack. This confirms the provider endpoint, credentials, model name, and timeout behavior before a longer generation or repair pass.
+`npm run dev` can also start the API for you when it is not already running. Open the workbench and use `Runtime -> Test Provider` before running a stack. This confirms the provider endpoint, credentials, model name, and timeout behavior before a longer generation or repair pass.
 
 ## Model Prefixes
 

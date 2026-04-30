@@ -6,16 +6,19 @@ It is intentionally an operator surface, not a landing page. The first screen is
 
 ## Run It
 
-Start the API:
-
-```bash
-personality-core serve --host 127.0.0.1 --port 8787
-```
-
-Start Vite:
+Start the workbench:
 
 ```bash
 npm run dev
+```
+
+`npm run dev` checks for the API at `http://127.0.0.1:8787`, starts it when needed, and then launches Vite.
+
+To run the API and UI separately:
+
+```bash
+personality-core serve --host 127.0.0.1 --port 8787
+npm run dev:ui
 ```
 
 Open:

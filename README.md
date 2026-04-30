@@ -74,17 +74,13 @@ ollama serve
 ollama pull gemma4:e4b
 ```
 
-Start the Personality Core API:
-
-```bash
-personality-core serve --host 127.0.0.1 --port 8787
-```
-
-In another terminal, start the workbench:
+Start the workbench:
 
 ```bash
 npm run dev
 ```
+
+`npm run dev` checks for the API at `http://127.0.0.1:8787`, starts it if needed, then starts the Vite UI.
 
 Open:
 
@@ -92,7 +88,22 @@ Open:
 http://127.0.0.1:5173
 ```
 
+If you want to run the API and UI separately:
+
+```bash
+personality-core serve --host 127.0.0.1 --port 8787
+npm run dev:ui
+```
+
 In the Runtime panel, click `Test Provider`. If Ollama responds, run a stack or draft a core.
+
+## API Only
+
+For headless/proxy usage, run only the API:
+
+```bash
+personality-core serve --host 127.0.0.1 --port 8787
+```
 
 ## Terminal Demo
 
