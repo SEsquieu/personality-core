@@ -152,7 +152,7 @@ http://127.0.0.1:5173
 
 The workbench loads cores and personality presets from the API. The default Stack Editor lets you install cores, tune strengths, resolve the stack, compile the stack prompt, and run the active stack. Compare mode remains available for side-by-side preset demos.
 
-Core Creator mode can draft a schema-valid core from a plain-language behavior intent, let you edit the JSON, validate it, install it into `cores/`, and add it to the active stack.
+Core Creator mode starts with a valid JSON template, can draft a schema-valid core from a plain-language behavior intent through the selected model endpoint, lets you edit the JSON, validates it, installs it into `cores/`, and adds it to the active stack.
 
 ## Python client example
 

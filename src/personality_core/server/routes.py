@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 from pathlib import Path
 import re
 from fastapi import APIRouter, HTTPException
@@ -20,9 +21,26 @@ def health():
 def list_cores():
     return {"data": [c.model_dump() for c in pipeline.registry.list()]}
 
+@router.get("/v1/cores/template")
+def core_template():
+    return {"core": build_core_template().model_dump()}
+
 @router.post("/v1/cores/draft")
-def draft_core(req: CoreDraftRequest):
-    return {"core": build_core_draft(req).model_dump()}
+async def draft_core(req: CoreDraftRequest):
+    warnings = []
+    source = "deterministic"
+    if req.model:
+        try:
+            core = await build_model_core_draft(req)
+            source = "model"
+        except ModelAdapterError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        except ValueError as exc:
+            warnings.append(f"Model draft was invalid, so a deterministic draft was used instead: {exc}")
+            core = build_core_draft(req)
+    else:
+        core = build_core_draft(req)
+    return {"core": core.model_dump(), "source": source, "warnings": warnings}
 
 @router.post("/v1/cores/validate")
 def validate_core(req: CoreInstallRequest):
@@ -190,6 +208,107 @@ def build_core_draft(req: CoreDraftRequest):
         "examples": [{"input": "Apply this behavior to a normal user request.", "ideal_style": intent[:120]}],
     }
     return pipeline.registry.validate_definition(data, source="draft")
+
+def build_core_template():
+    data = {
+        "id": "custom_example_core",
+        "name": "Custom Example Core",
+        "version": "0.1.0",
+        "description": "A starting point for a hand-authored personality core.",
+        "author": "local",
+        "trait_deltas": {
+            "directness": 0.25,
+            "warmth": 0.15,
+            "verbosity": -0.2,
+            "technicality": 0.2,
+        },
+        "default_strength": 0.65,
+        "params": {},
+        "rules": [
+            "Preserve task accuracy over style.",
+            "Keep the behavior visible without overwhelming the user.",
+            "Prefer concrete, inspectable responses.",
+        ],
+        "boundaries": {
+            "preserve_task_accuracy": True,
+            "no_fake_certainty": True,
+            "no_personal_attacks": True,
+            "no_slurs": True,
+        },
+        "evaluation_weights": {
+            "clarity": 0.8,
+            "directness": 0.6,
+            "technicality": 0.4,
+        },
+        "conflicts_with": [],
+        "examples": [
+            {
+                "input": "Explain a risky implementation choice.",
+                "ideal_style": "Lead with the risk, explain the mechanism, then give a concrete fix.",
+            }
+        ],
+    }
+    return pipeline.registry.validate_definition(data, source="template")
+
+async def build_model_core_draft(req: CoreDraftRequest):
+    intent = req.intent.strip()
+    if not intent:
+        raise HTTPException(status_code=400, detail="Intent is required.")
+    name = req.name.strip() if req.name else title_from_intent(intent)
+    template = build_core_template().model_dump()
+    template["id"] = slugify(name)
+    template["name"] = name
+    template["description"] = intent[:180]
+    template["author"] = req.author
+    prompt = (
+        "Create one Personality Core JSON object for this runtime personality layer.\n"
+        "Return JSON only. No markdown, comments, prose, or code fences.\n"
+        "The object must match this shape exactly, using these keys:\n"
+        f"{json.dumps(template, indent=2)}\n\n"
+        "Rules:\n"
+        "- id must be lowercase snake_case and end with _core.\n"
+        "- trait_deltas values must be numbers from -1.0 to 1.0.\n"
+        "- default_strength must be from 0.0 to 1.0.\n"
+        "- rules should describe observable behavior, not vague personality labels.\n"
+        "- boundaries should preserve task accuracy and avoid abusive behavior.\n\n"
+        f"Core name: {name}\n"
+        f"Intent: {intent}\n"
+    )
+    adapter = pipeline.adapter_for(req.model or "")
+    response = await adapter.generate(
+        req.model or "",
+        [
+            {"role": "system", "content": "You draft strict JSON configuration for Personality Core."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=req.temperature,
+        max_tokens=req.max_tokens,
+        think=req.think,
+    )
+    data = parse_json_object(response.content)
+    if not isinstance(data, dict):
+        raise ValueError("response JSON was not an object")
+    data["id"] = slugify(str(data.get("id") or name))
+    data["name"] = str(data.get("name") or name)
+    data["author"] = str(data.get("author") or req.author)
+    return pipeline.registry.validate_definition(data, source="model draft")
+
+def parse_json_object(text: str):
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        stripped = re.sub(r"^```(?:json)?\s*", "", stripped)
+        stripped = re.sub(r"\s*```$", "", stripped)
+    try:
+        return json.loads(stripped)
+    except json.JSONDecodeError:
+        start = stripped.find("{")
+        end = stripped.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise ValueError("response did not contain a JSON object")
+        try:
+            return json.loads(stripped[start : end + 1])
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"response JSON could not be parsed: {exc}") from exc
 
 def title_from_intent(intent: str) -> str:
     words = re.findall(r"[A-Za-z0-9]+", intent)[:4] or ["Custom"]

@@ -52,7 +52,7 @@ Installed Stack stays open by default. Runtime, Input, Load Preset, and Core Lib
 
 Each installed core is a compact row with its strength visible. Expanding a row reveals description, the strength slider, and trait deltas.
 
-Core Creator mode lets users draft, edit, validate, and install new core JSON files. Installed cores are immediately available in the Stack Editor.
+Core Creator mode lets users load a valid JSON template, draft through the selected model endpoint, edit, validate, and install new core JSON files. Installed cores are immediately available in the Stack Editor.
 
 The core interaction is:
 
@@ -71,6 +71,7 @@ same model + same prompt + different saved core stack = visible behavior differe
 The frontend uses native Personality Core routes:
 
 - `GET /v1/cores`
+- `GET /v1/cores/template`
 - `GET /v1/personalities`
 - `POST /v1/cores/draft`
 - `POST /v1/cores/validate`

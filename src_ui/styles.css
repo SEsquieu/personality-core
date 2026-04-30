@@ -490,6 +490,18 @@ textarea {
   min-height: 94px;
 }
 
+.json-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.json-label-row span {
+  color: #91a0a7;
+  font-size: 12px;
+}
+
 .json-editor {
   min-height: 420px;
   font-family: "Cascadia Code", "Fira Code", Consolas, monospace;

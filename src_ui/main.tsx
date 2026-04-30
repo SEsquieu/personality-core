@@ -64,6 +64,45 @@ const DEFAULT_STACK: CoreRef[] = [
   { id: "low_verbosity_core", strength: 0.75 },
   { id: "stability_core", strength: 0.85 }
 ];
+const CORE_TEMPLATE = {
+  id: "custom_example_core",
+  name: "Custom Example Core",
+  version: "0.1.0",
+  description: "A starting point for a hand-authored personality core.",
+  author: "local",
+  trait_deltas: {
+    directness: 0.25,
+    warmth: 0.15,
+    verbosity: -0.2,
+    technicality: 0.2
+  },
+  default_strength: 0.65,
+  params: {},
+  rules: [
+    "Preserve task accuracy over style.",
+    "Keep the behavior visible without overwhelming the user.",
+    "Prefer concrete, inspectable responses."
+  ],
+  boundaries: {
+    preserve_task_accuracy: true,
+    no_fake_certainty: true,
+    no_personal_attacks: true,
+    no_slurs: true
+  },
+  evaluation_weights: {
+    clarity: 0.8,
+    directness: 0.6,
+    technicality: 0.4
+  },
+  conflicts_with: [],
+  examples: [
+    {
+      input: "Explain a risky implementation choice.",
+      ideal_style: "Lead with the risk, explain the mechanism, then give a concrete fix."
+    }
+  ]
+};
+const CORE_TEMPLATE_JSON = JSON.stringify(CORE_TEMPLATE, null, 2);
 
 function App() {
   const [mode, setMode] = useState<"stack" | "compare" | "creator">("stack");
@@ -83,8 +122,8 @@ function App() {
   const [error, setError] = useState("");
   const [creatorIntent, setCreatorIntent] = useState("A concise technical reviewer that leads with risks and gives concrete fixes.");
   const [creatorName, setCreatorName] = useState("Concise Review Core");
-  const [creatorJson, setCreatorJson] = useState("");
-  const [creatorStatus, setCreatorStatus] = useState("");
+  const [creatorJson, setCreatorJson] = useState(CORE_TEMPLATE_JSON);
+  const [creatorStatus, setCreatorStatus] = useState("Template loaded. Edit id/name before installing, or draft from intent with the selected model.");
 
   useEffect(() => {
     void loadCatalog();
@@ -211,13 +250,36 @@ function App() {
     setError("");
     setCreatorStatus("");
     try {
-      const data = await postJson<{ core: CoreDefinition }>("/v1/cores/draft", {
+      const data = await postJson<{ core: CoreDefinition; source: string; warnings?: string[] }>("/v1/cores/draft", {
         intent: creatorIntent,
-        name: creatorName || undefined
+        name: creatorName || undefined,
+        model,
+        max_tokens: Math.max(900, maxTokens),
+        temperature: 0.2,
+        think: false
       });
       setCreatorJson(JSON.stringify(data.core, null, 2));
-      setCreatorStatus("Draft ready. Review the JSON, then validate or install.");
+      const warning = data.warnings?.[0] ? ` ${data.warnings[0]}` : "";
+      setCreatorStatus(`Draft ready from ${data.source}. Review the JSON, then validate or install.${warning}`);
     } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading("");
+    }
+  }
+
+  async function loadCoreTemplate() {
+    setLoading("template-core");
+    setError("");
+    try {
+      const response = await fetch("/v1/cores/template");
+      if (!response.ok) throw new Error(response.statusText);
+      const data = await response.json();
+      setCreatorJson(JSON.stringify(data.core ?? CORE_TEMPLATE, null, 2));
+      setCreatorStatus("Template loaded. Edit id/name before installing, or draft from intent with the selected model.");
+    } catch (err) {
+      setCreatorJson(CORE_TEMPLATE_JSON);
+      setCreatorStatus("Local template loaded. Backend template endpoint was not reachable.");
       setError(errorMessage(err));
     } finally {
       setLoading("");
@@ -371,9 +433,13 @@ function App() {
             </button>
           ) : (
             <div className="button-row">
+              <button className="secondary-button" onClick={loadCoreTemplate} disabled={loading !== ""}>
+                <Settings2 size={17} />
+                Template
+              </button>
               <button className="secondary-button" onClick={draftCore} disabled={loading !== ""}>
                 <Sparkles size={17} />
-                Draft
+                {loading === "draft-core" ? "Drafting" : "Draft"}
               </button>
               <button className="secondary-button" onClick={validateCreatedCore} disabled={loading !== "" || !creatorJson}>
                 <Settings2 size={17} />
@@ -641,7 +707,10 @@ function CoreCreator({
         </div>
       </div>
       {status && <div className="success-strip">{status}</div>}
-      <label>Core JSON</label>
+      <div className="json-label-row">
+        <label>Core JSON</label>
+        <span>Required: id, name, trait_deltas, default_strength, rules, boundaries.</span>
+      </div>
       <textarea className="json-editor" value={coreJson} onChange={(event) => onCoreJsonChange(event.target.value)} placeholder="Draft a core to begin." />
     </section>
   );

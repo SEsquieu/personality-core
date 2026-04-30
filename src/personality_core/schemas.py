@@ -52,6 +52,10 @@ class CoreDraftRequest(BaseModel):
     intent: str
     name: str | None = None
     author: str = "local"
+    model: str | None = None
+    max_tokens: int | None = 900
+    temperature: float | None = 0.2
+    think: bool | str | None = False
 
 class CoreInstallRequest(BaseModel):
     core: dict[str, Any]
