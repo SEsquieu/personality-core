@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { AlertTriangle, BrainCircuit, FlaskConical, Gauge, Play, Plus, Settings2, SlidersHorizontal, Trash2 } from "lucide-react";
+import { AlertTriangle, BrainCircuit, ChevronDown, FlaskConical, Gauge, Play, Settings2, SlidersHorizontal, Trash2 } from "lucide-react";
 import "./styles.css";
 
 type CoreDefinition = {
@@ -99,6 +99,7 @@ function App() {
   }
 
   const coreMap = useMemo(() => new Map(cores.map((core) => [core.id, core])), [cores]);
+  const stackSummary = useMemo(() => summarizeStack(stack, coreMap, resolved), [stack, coreMap, resolved]);
   const activeCompareResult = compareResults.find((result) => result.personality === activeCompare) ?? compareResults[0];
   const activeDebug = mode === "stack" ? runResult?.debug : activeCompareResult?.debug;
   const activeResolved = activeDebug?.resolved ?? resolved;
@@ -221,13 +222,27 @@ function App() {
           </button>
         </div>
 
-        <section className="control-section">
-          <label>Model</label>
-          <input value={model} onChange={(event) => setModel(event.target.value)} />
-        </section>
+        {mode === "stack" && (
+          <div className="stack-summary">
+            <strong>{stack.length} cores installed</strong>
+            <span>Top traits: {stackSummary.topTraits || "resolve stack"}</span>
+            <span>{stackSummary.conflicts}</span>
+          </div>
+        )}
 
-        <section className="control-section">
-          <label>Demo Prompt</label>
+        <CollapsibleSection title="Runtime" defaultOpen={false}>
+          <div className="field-group">
+            <label>Model</label>
+            <input value={model} onChange={(event) => setModel(event.target.value)} />
+          </div>
+
+          <div className="field-group">
+            <label>Token Cap: {maxTokens}</label>
+            <input type="range" min="120" max="1200" step="20" value={maxTokens} onChange={(event) => setMaxTokens(Number(event.target.value))} />
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Input" defaultOpen={false}>
           <div className="demo-grid">
             {Object.entries(DEMOS).map(([key, value]) => (
               <button key={key} className={prompt === value ? "active" : ""} onClick={() => setPrompt(value)}>
@@ -235,12 +250,7 @@ function App() {
               </button>
             ))}
           </div>
-        </section>
-
-        <section className="control-section">
-          <label>Token Cap: {maxTokens}</label>
-          <input type="range" min="120" max="1200" step="20" value={maxTokens} onChange={(event) => setMaxTokens(Number(event.target.value))} />
-        </section>
+        </CollapsibleSection>
 
         {mode === "stack" ? (
           <StackControls
@@ -391,33 +401,26 @@ function StackControls({
   onStrengthChange: (coreId: string, strength: number) => void;
 }) {
   const available = cores.filter((core) => !stack.some((item) => item.id === core.id));
+  const [presetId, setPresetId] = useState("");
 
   return (
     <>
-      <section className="control-section">
-        <label>Load Preset</label>
-        <div className="preset-list">
-          {personalities.map((persona) => (
-            <button className="preset-button" key={persona.id} onClick={() => onLoadPreset(persona)}>
-              {persona.name}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="control-section">
-        <label>Installed Core Stack</label>
-        <div className="module-list">
+      <CollapsibleSection title="Installed Stack" defaultOpen>
+        <div className="module-list compact">
           {stack.map((ref) => {
             const core = coreMap.get(ref.id);
             return (
-              <div className="core-module" key={ref.id}>
-                <div className="module-head">
-                  <strong>{core?.name ?? ref.id}</strong>
-                  <button title="Remove core" onClick={() => onRemoveCore(ref.id)}>
+              <details className="core-row" key={ref.id}>
+                <summary>
+                  <span>{core?.name ?? ref.id}</span>
+                  <strong>{ref.strength.toFixed(2)}</strong>
+                  <button title="Remove core" onClick={(event) => {
+                    event.preventDefault();
+                    onRemoveCore(ref.id);
+                  }}>
                     <Trash2 size={15} />
                   </button>
-                </div>
+                </summary>
                 <p>{core?.description}</p>
                 <div className="slider-row">
                   <span>{ref.strength.toFixed(2)}</span>
@@ -430,14 +433,44 @@ function StackControls({
                     onChange={(event) => onStrengthChange(ref.id, Number(event.target.value))}
                   />
                 </div>
-              </div>
+                {core && (
+                  <div className="trait-deltas">
+                    {Object.entries(core.trait_deltas).map(([trait, value]) => (
+                      <div className="trace-row" key={trait}>
+                        <span>{trait}</span>
+                        <strong>{formatSigned(value)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </details>
             );
           })}
         </div>
-      </section>
+      </CollapsibleSection>
 
-      <section className="control-section">
-        <label>Add Core</label>
+      <CollapsibleSection title="Load Preset" defaultOpen={false}>
+        <div className="inline-action">
+          <select value={presetId} onChange={(event) => setPresetId(event.target.value)}>
+            <option value="">Choose a preset</option>
+            {personalities.map((persona) => (
+              <option value={persona.id} key={persona.id}>{persona.name}</option>
+            ))}
+          </select>
+          <button
+            className="secondary-button"
+            disabled={!presetId}
+            onClick={() => {
+              const persona = personalities.find((item) => item.id === presetId);
+              if (persona) onLoadPreset(persona);
+            }}
+          >
+            Load
+          </button>
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Core Library" defaultOpen={false}>
         <select defaultValue="" onChange={(event) => {
           onAddCore(event.target.value);
           event.target.value = "";
@@ -447,7 +480,7 @@ function StackControls({
             <option value={core.id} key={core.id}>{core.name}</option>
           ))}
         </select>
-      </section>
+      </CollapsibleSection>
     </>
   );
 }
@@ -462,8 +495,7 @@ function CompareControls({
   onSelectedChange: (selected: string[]) => void;
 }) {
   return (
-    <section className="control-section">
-      <label>Compare Presets</label>
+    <CollapsibleSection title="Compare Presets" defaultOpen>
       <div className="preset-list">
         {personalities.map((persona) => (
           <label key={persona.id} className="check-row">
@@ -480,7 +512,19 @@ function CompareControls({
           </label>
         ))}
       </div>
-    </section>
+    </CollapsibleSection>
+  );
+}
+
+function CollapsibleSection({ title, defaultOpen, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  return (
+    <details className="nav-section" open={defaultOpen}>
+      <summary>
+        <span>{title}</span>
+        <ChevronDown size={16} />
+      </summary>
+      <div className="section-body">{children}</div>
+    </details>
   );
 }
 
@@ -617,6 +661,29 @@ function formatSigned(value: number) {
 
 function errorMessage(err: unknown) {
   return err instanceof Error ? err.message : "Request failed.";
+}
+
+function summarizeStack(stack: CoreRef[], coreMap: Map<string, CoreDefinition>, resolved: ResolvedStack | null) {
+  const traits = resolved?.resolved_traits ?? estimateTraits(stack, coreMap);
+  const topTraits = Object.entries(traits)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([trait]) => trait)
+    .join(", ");
+  const conflicts = resolved?.conflicts.length ? `${resolved.conflicts.length} conflict${resolved.conflicts.length === 1 ? "" : "s"}` : "No conflicts";
+  return { topTraits, conflicts };
+}
+
+function estimateTraits(stack: CoreRef[], coreMap: Map<string, CoreDefinition>) {
+  const traits: Record<string, number> = {};
+  for (const ref of stack) {
+    const core = coreMap.get(ref.id);
+    if (!core) continue;
+    for (const [trait, delta] of Object.entries(core.trait_deltas)) {
+      traits[trait] = (traits[trait] ?? 0) + Math.max(0, delta * ref.strength);
+    }
+  }
+  return traits;
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

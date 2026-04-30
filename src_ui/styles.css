@@ -45,6 +45,12 @@ button {
 }
 
 .core-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.core-panel {
   border-width: 0 1px 0 0;
 }
 
@@ -87,12 +93,15 @@ h1 {
   color: #91a0a7;
 }
 
-.control-section,
 .diag-section {
   margin-top: 24px;
 }
 
-.control-section label,
+.field-group + .field-group {
+  margin-top: 16px;
+}
+
+.field-group label,
 .diag-section h3 {
   display: block;
   margin-bottom: 10px;
@@ -154,6 +163,57 @@ textarea {
   margin-bottom: 24px;
 }
 
+.stack-summary {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid #2d3b41;
+  border-radius: 8px;
+  background: #0d1417;
+}
+
+.stack-summary strong {
+  color: #f0f7f8;
+}
+
+.stack-summary span {
+  color: #91a0a7;
+  font-size: 12px;
+}
+
+.nav-section {
+  border: 1px solid #28353b;
+  border-radius: 8px;
+  background: #0d1417;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-section > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 0 12px;
+  list-style: none;
+  color: #dce7ea;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.nav-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav-section[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.section-body {
+  padding: 0 12px 12px;
+}
+
 .mode-switch button,
 .preset-button {
   min-height: 38px;
@@ -191,11 +251,45 @@ textarea {
   gap: 10px;
 }
 
-.core-module {
+.core-module,
+.core-row {
   border: 1px solid #2b3940;
   border-radius: 8px;
   padding: 12px;
   background: #0d1417;
+}
+
+.core-row {
+  margin: 0;
+}
+
+.core-row > summary {
+  display: grid;
+  grid-template-columns: 1fr 44px 30px;
+  gap: 8px;
+  align-items: center;
+  list-style: none;
+}
+
+.core-row > summary::-webkit-details-marker {
+  display: none;
+}
+
+.core-row > summary span {
+  color: #e4eef1;
+  font-weight: 800;
+}
+
+.core-row > summary strong {
+  color: #97d8e6;
+  font-size: 13px;
+}
+
+.core-row > summary button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
 }
 
 .module-head,
@@ -217,7 +311,8 @@ textarea {
   place-items: center;
 }
 
-.core-module p {
+.core-module p,
+.core-row p {
   margin-top: 7px;
   color: #91a0a7;
   font-size: 13px;
@@ -234,6 +329,18 @@ textarea {
   color: #b9c6ca;
   font-size: 13px;
   font-weight: 700;
+}
+
+.trait-deltas {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #243037;
+}
+
+.inline-action {
+  display: grid;
+  grid-template-columns: 1fr 82px;
+  gap: 8px;
 }
 
 .check-row {
@@ -424,7 +531,8 @@ textarea {
   background: #55bdd1;
 }
 
-details {
+.diagnostics details,
+.compiled-prompt {
   border: 1px solid #28353b;
   border-radius: 7px;
   margin-bottom: 8px;
@@ -458,7 +566,8 @@ pre {
   font-size: 13px;
 }
 
-summary {
+.diagnostics summary,
+.compiled-prompt summary {
   cursor: pointer;
   color: #e3edf0;
   font-weight: 700;

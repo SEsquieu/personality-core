@@ -40,6 +40,18 @@ The workbench has three areas:
 - center: prompt editor, resolve/compile/run actions, generated output
 - right: diagnostics, resolved traits, per-core scores, conflicts, core trace
 
+The left panel is organized as collapsible workflow sections:
+
+- Runtime
+- Input
+- Installed Stack
+- Load Preset
+- Core Library
+
+Installed Stack stays open by default. Runtime, Input, Load Preset, and Core Library are collapsed so the stack remains the primary object on screen.
+
+Each installed core is a compact row with its strength visible. Expanding a row reveals description, the strength slider, and trait deltas.
+
 The core interaction is:
 
 ```text
