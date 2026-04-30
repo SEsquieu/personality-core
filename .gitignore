@@ -5,3 +5,6 @@ __pycache__/
 .DS_Store
 .pytest_cache/
 pytest-cache-files-*/
+*.egg-info/
+docs/handoff*.md
+docs/*handoff*.md
