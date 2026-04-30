@@ -1,144 +1,86 @@
 # Personality Core
 
-Composable personality cores for LLMs. Tune, stack, evaluate, and stabilize model behavior across long-running conversations and agent loops.
+Runtime behavior control for LLM applications.
 
-Inspired by modular personality cores from *Portal*, but built as practical LLM infrastructure.
+Personality Core is an OpenAI-compatible middleware layer that lets teams define, stack, validate, and repair model behavior at runtime. It started with Portal-inspired personality modules, but the core abstraction is broader: a stackable behavior contract for agents and LLM pipelines.
 
-```txt
-Install cores.
-Tune cores.
-Stack cores.
-Stabilize cores.
+Use it to keep long-running assistants, agent chains, and tool pipelines closer to the behavior you intended:
+
+- consistent voice and tone
+- structured JSON output
+- provider-independent model routing
+- drift evaluation and repair
+- inspectable prompt compilation
+- stackable behavior presets for different workflows
+
+```text
+request -> core stack -> compiled behavior contract -> model -> evaluator -> optional repair -> response
 ```
 
-## What this is
+## Why This Exists
 
-Personality Core is an OpenAI-compatible local proxy. It accepts normal `/v1/chat/completions` requests, composes a stack of declarative JSON personality cores, compiles them into model-specific instructions, calls an LLM runtime such as Ollama, evaluates style alignment, and optionally runs a stabilizer pass to repair drift.
+LLM behavior drifts. A model can start in the right voice, then slowly become generic. It can return prose where a downstream node expects JSON. It can grow verbose, lose skepticism, soften constraints, or ignore a carefully written system prompt after enough context pressure.
 
-The transport stays boring. The interface gets the fun.
+Personality Core gives that behavior a runtime layer:
 
-## Quickstart
+1. Define behavior as declarative JSON cores.
+2. Stack cores per request or preset.
+3. Compile the stack into model-specific instructions.
+4. Call the selected provider.
+5. Evaluate whether the output matched the stack.
+6. Warn, repair, block, or return raw output when contracts fail.
 
-### 1. Install
+The goal is not to pretend the model has a stable inner personality. The goal is to make outward behavior observable, repeatable, and enforceable enough for real agent workflows.
+
+## Current Capabilities
+
+- FastAPI server with OpenAI-compatible `/v1/chat/completions`
+- provider routing for Ollama, OpenAI, OpenRouter, and LM Studio-style endpoints
+- declarative JSON core registry
+- stack resolver with trait merging, rules, boundaries, conflicts, and contracts
+- model-specific prompt compiler
+- heuristic style evaluator
+- behavior contract evaluator
+- optional stabilizer/repair pass
+- CLI for local inspection and demos
+- React workbench for stack editing, provider testing, comparison, and core creation
+- model-assisted core drafting through the selected runtime model
+
+## Install
 
 ```bash
+git clone https://github.com/SEsquieu/personality-core.git
 cd personality-core
+
 python -m venv .venv
-# Windows PowerShell:
 .venv\Scripts\Activate.ps1
-# macOS/Linux:
-# source .venv/bin/activate
-pip install -e .
-```
-
-For development and tests:
-
-```bash
 pip install -e ".[dev]"
+
 npm install
 ```
 
-### 2. Choose a model backend
+On macOS/Linux, activate the venv with:
 
-Ollama works out of the box:
+```bash
+source .venv/bin/activate
+```
+
+## Quickstart With Ollama
+
+Start Ollama and pull a chat model:
 
 ```bash
 ollama serve
 ollama pull gemma4:e4b
 ```
 
-Any Ollama chat model should work. Use the `ollama/` prefix when passing it to Personality Core:
-
-```bash
-personality-core chat "Why is config drift a problem?" --model "ollama/gemma4:e4b"
-```
-
-You can set a different default model:
-
-```bash
-PERSONALITY_CORE_DEFAULT_MODEL=ollama/llama3.2:3b
-```
-
-### 3. Run Personality Core
+Start the Personality Core API:
 
 ```bash
 personality-core serve --host 127.0.0.1 --port 8787
 ```
 
-### 4. Try a personality stack from the terminal
-
-```bash
-personality-core demo
-```
-
-Then run one of the printed examples, or try:
-
-```bash
-personality-core chat "Explain why hiding errors behind retries makes debugging miserable." \
-  --model "ollama/gemma4:e4b" \
-  --cores "technical_core:0.95,sarcasm_core:0.7,profanity_core:0.35,low_verbosity_core:0.75" \
-  --max-tokens 300 \
-  --debug
-```
-
-Personality Core sends `think: false` to Ollama by default so thinking-capable models use the token budget for visible output. Pass `--think` if you want Ollama reasoning traces enabled.
-
-If the output stops mid-sentence or mid-list, increase `--max-tokens`. Debug mode includes `model_response.done_reason`; `length` means the model hit the output cap.
-
-Once the fast path works, add `--stabilizer` to test the optional repair pass.
-
-### 5. Compare personalities
-
-Run the same prompt through several saved personality presets:
-
-```bash
-personality-core compare "Explain why retries hide real errors." \
-  --model "ollama/gemma4:e4b" \
-  --max-tokens 260
-```
-
-This is the fastest way to see the core stack idea in motion: same model, same prompt, different resolved behavior.
-
-Named demo prompts are built in:
-
-```bash
-personality-core compare --demo retry_loop --summary
-personality-core compare --demo angry_customer --json
-personality-core compare --demo code_review --save runs/code-review-demo.json
-```
-
-Available demos: `retry_loop`, `angry_customer`, `code_review`, `startup_pitch`, `debugging`.
-
-### 6. Test the OpenAI-compatible endpoint
-
-```bash
-curl http://127.0.0.1:8787/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "ollama/gemma4:e4b",
-    "messages": [
-      {"role": "user", "content": "Explain why mutating shared state inside a retry loop is dangerous."}
-    ],
-    "cores": [
-      {"id": "technical_core", "strength": 0.95},
-      {"id": "sarcasm_core", "strength": 0.7},
-      {"id": "profanity_core", "strength": 0.35},
-      {"id": "low_verbosity_core", "strength": 0.75}
-    ],
-    "stabilizer": {"enabled": true, "threshold": 0.78},
-    "debug": true
-  }'
-```
-
-### 7. Run the workbench UI
-
-Start the API:
-
-```bash
-personality-core serve --host 127.0.0.1 --port 8787
-```
-
-Start the Vite app:
+In another terminal, start the workbench:
 
 ```bash
 npm run dev
@@ -150,15 +92,31 @@ Open:
 http://127.0.0.1:5173
 ```
 
-The workbench loads cores and personality presets from the API. The default Stack Editor lets you install cores, tune strengths, resolve the stack, compile the stack prompt, and run the active stack. Compare mode remains available for side-by-side preset demos.
+In the Runtime panel, click `Test Provider`. If Ollama responds, run a stack or draft a core.
 
-Core Creator mode starts with a valid JSON template, can draft a schema-valid core from a plain-language behavior intent through the selected model endpoint, lets you edit the JSON, validates it, installs it into `cores/`, and adds it to the active stack.
+## Terminal Demo
 
-Use the Runtime panel to pick a provider model and run `Test Provider` before running a stack. Supported model prefixes include `ollama/`, bare Ollama model names, `openai/`, `openrouter/`, and `lmstudio/`. See [docs/provider_setup.md](docs/provider_setup.md).
+Run the same prompt through saved behavior stacks:
 
-Behavior contracts let cores enforce output requirements such as valid JSON, then warn, repair, block, or return raw output when the model drifts. The first built-in contract core is `structured_json_output_core`. See [docs/behavior_contracts.md](docs/behavior_contracts.md).
+```bash
+personality-core compare --demo retry_loop --model "ollama/gemma4:e4b" --max-tokens 260
+```
 
-## Python client example
+Run a custom stack:
+
+```bash
+personality-core chat "Explain why hiding errors behind retries makes debugging miserable." `
+  --model "ollama/gemma4:e4b" `
+  --cores "technical_core:0.95,sarcasm_core:0.7,low_verbosity_core:0.75" `
+  --max-tokens 300 `
+  --debug
+```
+
+PowerShell uses backticks for line continuation. In bash/zsh, use `\`.
+
+## OpenAI-Compatible Usage
+
+Point an existing OpenAI client at the local proxy and pass cores in `extra_body`.
 
 ```python
 from openai import OpenAI
@@ -171,119 +129,205 @@ response = client.chat.completions.create(
     extra_body={
         "cores": [
             {"id": "technical_core", "strength": 0.9},
-            {"id": "sarcasm_core", "strength": 0.65},
-            {"id": "stability_core", "strength": 0.8},
+            {"id": "skepticism_core", "strength": 0.7},
+            {"id": "stability_core", "strength": 0.8}
         ],
         "stabilizer": {"enabled": True},
-    },
+        "fail_policy": "repair",
+        "debug": True
+    }
 )
 
 print(response.choices[0].message.content)
 ```
 
-## CLI
+## Behavior Contracts
 
-```bash
-personality-core list-cores
-personality-core inspect sarcasm_core
-personality-core validate cores/sarcasm_core.json
-personality-core stack --cores technical_core:0.9,sarcasm_core:0.7,profanity_core:0.3
-personality-core prompt --cores technical_core:0.9,sarcasm_core:0.7
-personality-core demo
-personality-core chat "Why is config drift a problem?" --cores technical_core:0.9,sarcasm_core:0.65 --debug
-personality-core compare "Explain retry loops like I am debugging production."
-personality-core compare --demo code_review --summary
-personality-core compare --demo retry_loop --json
-personality-core test --model ollama/gemma4:e4b --cores technical_core:0.95,sarcasm_core:0.7 --turns 3
-npm run dev
-npm run build
+Cores can be personality modules, but they can also be operational contracts. The built-in `structured_json_output_core` requires the model to return one valid JSON object with:
+
+```json
+{
+  "answer": "string",
+  "confidence": 0.86,
+  "notes": ["short validation notes"]
+}
 ```
 
-## Configuration
+Example request:
 
-By default, the CLI and server load local assets from `cores/`, `personalities/`, and `model_profiles/`.
-
-You can override those paths when embedding Personality Core in another project:
-
-```bash
-PERSONALITY_CORE_CORES_DIR=/path/to/cores
-PERSONALITY_CORE_PERSONALITIES_DIR=/path/to/personalities
-PERSONALITY_CORE_MODEL_PROFILES_DIR=/path/to/model_profiles
-PERSONALITY_CORE_DEFAULT_MODEL=ollama/gemma4:e4b
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_TIMEOUT=300
-OPENAI_API_KEY=
+```json
+{
+  "model": "ollama/gemma4:e4b",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Summarize why retries hide real errors."
+    }
+  ],
+  "cores": [
+    { "id": "structured_json_output_core", "strength": 1.0 },
+    { "id": "technical_core", "strength": 0.8 }
+  ],
+  "fail_policy": "repair",
+  "debug": true
+}
 ```
 
-## Core files
+Contract fail policies:
+
+- `warn`: return the output and include contract warnings
+- `repair`: ask the model to repair contract drift
+- `block`: return no content when the contract fails
+- `raw`: return the raw model output
+
+See [docs/behavior_contracts.md](docs/behavior_contracts.md).
+
+## Provider Routing
+
+Model prefixes select the provider:
+
+```text
+ollama/gemma4:e4b                  -> Ollama
+gemma4:e4b                         -> Ollama shorthand
+openai/gpt-4.1-mini                -> OpenAI
+openrouter/openai/gpt-4o-mini      -> OpenRouter
+lmstudio/local-model               -> LM Studio local server
+```
+
+Copy `.env.example` to `.env` and set provider keys as needed. The workbench also exposes `GET /v1/providers` metadata through the Runtime panel.
+
+See [docs/provider_setup.md](docs/provider_setup.md).
+
+## Core Files
 
 Cores are declarative JSON files in `cores/`.
 
 ```json
 {
-  "id": "sarcasm_core",
-  "name": "Sarcasm Core",
+  "id": "skepticism_core",
+  "name": "Skepticism Core",
+  "kind": "personality",
   "trait_deltas": {
-    "sarcasm": 0.8,
-    "formality": -0.2,
-    "warmth": -0.1
+    "skepticism": 0.9,
+    "directness": 0.4,
+    "agreeableness": -0.4
   },
-  "default_strength": 0.65,
+  "default_strength": 0.75,
   "rules": [
-    "Use dry sarcasm when pointing out obvious mistakes.",
-    "Do not aim sarcasm at the user personally.",
-    "Preserve technical accuracy over comedic timing."
-  ]
+    "Challenge weak assumptions directly.",
+    "Do not agree just to be agreeable.",
+    "Explain what could break or be missing."
+  ],
+  "boundaries": {
+    "preserve_task_accuracy": true,
+    "no_fake_certainty": true
+  }
 }
 ```
 
-A request installs cores into the active stack:
+The workbench includes a Core Creator that can:
 
-```json
-{
-  "cores": [
-    {"id": "technical_core", "strength": 0.9},
-    {"id": "sarcasm_core", "strength": 0.7}
-  ]
-}
+- load a valid template
+- draft a core with the selected model
+- validate schema and ranges
+- install the core into `cores/`
+- add it to the active stack
+
+See [docs/core_creator.md](docs/core_creator.md).
+
+## Workbench
+
+The React workbench is designed for interactive development:
+
+- **Stack Editor**: add cores, tune strengths, resolve, compile, run
+- **Compare**: run the same prompt through saved presets
+- **Core Creator**: draft and validate new cores
+- **Runtime**: choose provider model, test provider, choose contract fail policy
+- **Diagnostics**: inspect resolved traits, core scores, conflicts, contracts, and trace
+
+See [docs/frontend_workbench.md](docs/frontend_workbench.md).
+
+## CLI Reference
+
+```bash
+personality-core list-cores
+personality-core inspect structured_json_output_core
+personality-core validate cores/structured_json_output_core.json
+personality-core stack --cores technical_core:0.9,skepticism_core:0.7
+personality-core prompt --cores technical_core:0.9,structured_json_output_core:1.0
+personality-core demo
+personality-core chat "Why is config drift a problem?" --cores technical_core:0.9,skepticism_core:0.7 --debug
+personality-core compare --demo retry_loop --summary
+personality-core test --model ollama/gemma4:e4b --cores technical_core:0.95,sarcasm_core:0.7 --turns 3
 ```
+
+## API Routes
+
+Native routes:
+
+- `GET /health`
+- `GET /v1/cores`
+- `GET /v1/cores/template`
+- `POST /v1/cores/draft`
+- `POST /v1/cores/validate`
+- `POST /v1/cores/install`
+- `GET /v1/personalities`
+- `GET /v1/providers`
+- `POST /v1/providers/health`
+- `POST /v1/stack/resolve`
+- `POST /v1/stack/compile`
+- `POST /v1/stack/run`
+- `POST /v1/compare`
+
+Compatibility route:
+
+- `POST /v1/chat/completions`
 
 ## Architecture
 
-```txt
-App / Agent
-   ↓
-Personality Core proxy
-   ↓
+```text
+Application / Agent
+        |
+        v
+OpenAI-compatible proxy
+        |
+        v
 Core registry + stack resolver
-   ↓
-Core compiler
-   ↓
-Model adapter
-   ↓
-LLM runtime
-   ↓
-Evaluator
-   ↓
-Optional stabilizer
-   ↓
-OpenAI-compatible response
+        |
+        v
+Prompt compiler + provider adapter
+        |
+        v
+LLM provider
+        |
+        v
+Style evaluator + contract evaluator
+        |
+        v
+Fail policy + optional stabilizer
+        |
+        v
+Response + debug metadata
 ```
 
-## Current status
+## Project Status
 
-This is an MVP scaffold intended for tinkering:
+This is an active MVP. The core architecture is in place, including provider routing, stack resolution, behavior contracts, and repair policy. It is ready for local experimentation and early integration work, but it is not production hardened yet.
 
-- FastAPI server
-- OpenAI-compatible `/v1/chat/completions`
-- Ollama adapter
-- core registry and validation
-- stack resolver
-- model profiles
-- compiler
-- heuristic evaluator
-- optional LLM-powered stabilizer pass
-- CLI
-- default cores and presets
+Near-term priorities:
 
-Not production hardened yet.
+- richer contract types
+- stronger evaluator plugins
+- saved custom stacks
+- SDK helpers for common agent frameworks
+- persisted run history and regression tests
+- provider-specific streaming support
+
+## Documentation
+
+- [Provider setup](docs/provider_setup.md)
+- [Behavior contracts](docs/behavior_contracts.md)
+- [Core creator](docs/core_creator.md)
+- [Stack workflow](docs/stack_workflow.md)
+- [Frontend workbench](docs/frontend_workbench.md)
+- [Demo kit](docs/demo_kit.md)

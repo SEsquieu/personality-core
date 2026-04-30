@@ -2,7 +2,7 @@
 
 The main product workflow is the Core Stack, not the comparison demo.
 
-A stack is the active set of installed personality cores for a model call:
+A stack is the active set of installed behavior cores for a model call:
 
 ```json
 [
@@ -15,12 +15,12 @@ A stack is the active set of installed personality cores for a model call:
 ## Runtime Loop
 
 ```text
-install cores -> tune strengths -> resolve stack -> compile stack -> run model -> evaluate output
+install cores -> tune strengths -> resolve stack -> compile stack -> run model -> evaluate output -> apply fail policy
 ```
 
 ## Short-Circuit Modes
 
-Use these when integrating Personality Core into an existing chain without spending model tokens.
+Use these when integrating Personality Core into an existing chain without spending model tokens. Resolve and compile are useful for inspection; run is the full middleware path.
 
 Resolve:
 
@@ -44,7 +44,7 @@ Run:
 POST /v1/stack/run
 ```
 
-Calls the model with the active stack and returns output, warnings, evaluation, and debug data.
+Calls the model with the active stack and returns output, warnings, style evaluation, contract evaluation, and debug data.
 
 ## Frontend
 

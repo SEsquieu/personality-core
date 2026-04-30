@@ -1,6 +1,6 @@
 # Behavior Contracts
 
-Personality Core is becoming a runtime behavior contract layer. Personality is one category of behavior, but teams can also use the same stack position for format, workflow, safety, and domain constraints.
+Personality Core can enforce runtime behavior contracts, not just personality traits. Personality is one behavior category; format, workflow, safety, reasoning, and domain constraints can live in the same stack.
 
 ## Why It Matters
 
@@ -12,7 +12,7 @@ Agent chains fail when model output drifts away from the contract the next step 
 - unsupported certainty
 - verbose output where a tool expects a short value
 
-Behavior contracts let a core declare what must be true about the output. The runtime compiles the contract into the prompt, evaluates the response, and applies the selected fail policy.
+Behavior contracts let a core declare what must be true about the output. The runtime compiles the contract into the prompt, evaluates the response, and applies the selected fail policy. This makes the layer useful in the middle of an agent chain where downstream steps need predictable output.
 
 ## Core Kinds
 
