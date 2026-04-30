@@ -19,6 +19,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -102,6 +103,7 @@ h1 {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   border: 1px solid #2d3b41;
@@ -112,6 +114,11 @@ textarea {
 }
 
 input {
+  height: 38px;
+  padding: 0 10px;
+}
+
+select {
   height: 38px;
   padding: 0 10px;
 }
@@ -130,10 +137,32 @@ textarea {
 
 .demo-grid button,
 .result-tabs button,
-.run-button {
+.run-button,
+.secondary-button,
+.preset-button,
+.mode-switch button,
+.core-module button {
   border-radius: 7px;
   color: #d9e4e8;
   background: #1a252a;
+}
+
+.mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.mode-switch button,
+.preset-button {
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+.mode-switch button.active {
+  background: #244653;
+  box-shadow: inset 0 0 0 1px #55bdd1;
 }
 
 .demo-grid button {
@@ -151,6 +180,60 @@ textarea {
 .preset-list {
   display: grid;
   gap: 8px;
+}
+
+.preset-button {
+  text-align: left;
+}
+
+.module-list {
+  display: grid;
+  gap: 10px;
+}
+
+.core-module {
+  border: 1px solid #2b3940;
+  border-radius: 8px;
+  padding: 12px;
+  background: #0d1417;
+}
+
+.module-head,
+.slider-row,
+.button-row {
+  display: flex;
+  align-items: center;
+}
+
+.module-head {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.module-head button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+}
+
+.core-module p {
+  margin-top: 7px;
+  color: #91a0a7;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.slider-row {
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.slider-row span {
+  width: 42px;
+  color: #b9c6ca;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .check-row {
@@ -188,6 +271,26 @@ textarea {
   background: #d8b44a;
   color: #101417;
   font-weight: 800;
+}
+
+.button-row {
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.secondary-button {
+  min-width: 104px;
+  height: 42px;
+  justify-content: center;
+  gap: 7px;
+  display: flex;
+  align-items: center;
+}
+
+.secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .run-button:disabled {
@@ -327,6 +430,32 @@ details {
   margin-bottom: 8px;
   padding: 9px 10px;
   background: #0d1417;
+}
+
+.compiled-prompt {
+  margin-top: 18px;
+}
+
+pre {
+  white-space: pre-wrap;
+  color: #c8d4d8;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.conflict-row {
+  display: grid;
+  gap: 5px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: #3b3219;
+  color: #ffe4a1;
+  margin-bottom: 8px;
+}
+
+.conflict-row span {
+  color: #ead19a;
+  font-size: 13px;
 }
 
 summary {

@@ -150,7 +150,7 @@ Open:
 http://127.0.0.1:5173
 ```
 
-The workbench loads cores and personality presets from the API, runs compare jobs through `/v1/compare`, and shows resolved traits, per-core scores, core trace, warnings, and model output.
+The workbench loads cores and personality presets from the API. The default Stack Editor lets you install cores, tune strengths, resolve the stack, compile the stack prompt, and run the active stack. Compare mode remains available for side-by-side preset demos.
 
 ## Python client example
 

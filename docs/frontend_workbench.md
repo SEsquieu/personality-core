@@ -2,7 +2,7 @@
 
 The Vite + React workbench is the first visual interface for Personality Core.
 
-It is intentionally an operator surface, not a landing page. The first screen lets users run the same prompt through multiple personality presets and inspect what changed.
+It is intentionally an operator surface, not a landing page. The first screen is a Core Stack Editor for tuning installed cores in situ, with Compare mode kept as the quick demo lane.
 
 ## Run It
 
@@ -36,14 +36,20 @@ npm run build
 
 The workbench has three areas:
 
-- left: model, demo prompt, preset selection, token cap
-- center: prompt editor, run button, result tabs, generated output
-- right: diagnostics, resolved traits, per-core scores, core trace, installed rules
+- left: mode switch, model, demo prompt, token cap, stack/preset controls
+- center: prompt editor, resolve/compile/run actions, generated output
+- right: diagnostics, resolved traits, per-core scores, conflicts, core trace
 
 The core interaction is:
 
 ```text
-same model + same prompt + different core stack = visible behavior differences
+install cores -> tune strengths -> resolve/compile -> run stack -> validate output
+```
+
+Compare mode still supports:
+
+```text
+same model + same prompt + different saved core stack = visible behavior differences
 ```
 
 ## Backend Routes
@@ -52,15 +58,17 @@ The frontend uses native Personality Core routes:
 
 - `GET /v1/cores`
 - `GET /v1/personalities`
+- `POST /v1/stack/resolve`
+- `POST /v1/stack/compile`
+- `POST /v1/stack/run`
 - `POST /v1/compare`
 
 The OpenAI-compatible `/v1/chat/completions` route remains available for external clients.
 
 ## Next UI Improvements
 
-- editable custom core stack with sliders
-- single-run mode next to compare mode
 - stabilizer before/after view
-- compiled prompt drawer
 - saved comparison history
 - model/backend health indicator
+- save/load custom stack JSON
+- edit core params beyond strength

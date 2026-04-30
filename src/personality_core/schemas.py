@@ -38,6 +38,16 @@ class CompareRequest(BaseModel):
     think: bool | str | None = False
     stabilizer: StabilizerConfig | bool | None = None
 
+class StackRequest(BaseModel):
+    model: str = "ollama/gemma4:e4b"
+    prompt: str = ""
+    cores: list[CoreRef] = Field(default_factory=list)
+    base_traits: dict[str, float] = Field(default_factory=dict)
+    max_tokens: int | None = 300
+    temperature: float | None = None
+    think: bool | str | None = False
+    stabilizer: StabilizerConfig | bool | None = None
+
 class CoreDefinition(BaseModel):
     id: str
     name: str
