@@ -156,6 +156,8 @@ Core Creator mode starts with a valid JSON template, can draft a schema-valid co
 
 Use the Runtime panel to pick a provider model and run `Test Provider` before running a stack. Supported model prefixes include `ollama/`, bare Ollama model names, `openai/`, `openrouter/`, and `lmstudio/`. See [docs/provider_setup.md](docs/provider_setup.md).
 
+Behavior contracts let cores enforce output requirements such as valid JSON, then warn, repair, block, or return raw output when the model drifts. The first built-in contract core is `structured_json_output_core`. See [docs/behavior_contracts.md](docs/behavior_contracts.md).
+
 ## Python client example
 
 ```python

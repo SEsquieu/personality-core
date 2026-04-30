@@ -7,6 +7,7 @@ from personality_core.core.persona_store import PersonaStore
 from personality_core.core.mode_detector import detect_mode
 from personality_core.core.compiler import CoreCompiler
 from personality_core.scoring.heuristic import score_text
+from personality_core.scoring.contracts import evaluate_contracts
 from personality_core.core.stabilizer import Stabilizer
 from personality_core.adapters.ollama import OllamaAdapter
 from personality_core.adapters.openai import OpenAIAdapter
@@ -60,6 +61,7 @@ class PersonalityPipeline:
         raw_response = await adapter.generate(req.model, outbound, temperature=req.temperature, max_tokens=req.max_tokens, think=req.think)
         raw = raw_response.content
         evaluation = score_text(raw, resolved)
+        contract_evaluation = evaluate_contracts(raw, resolved)
         stabilizer_cfg = req.stabilizer
         enabled = bool(req.repair)
         threshold = 0.78
@@ -70,28 +72,52 @@ class PersonalityPipeline:
             threshold = stabilizer_cfg.threshold
         final = raw
         repaired = False
-        if enabled and evaluation["core_match"] < threshold:
-            repair_messages = self.stabilizer.build_repair_messages(messages, raw, resolved, evaluation)
+        blocked = False
+        warnings = []
+        if contract_evaluation["repair_needed"]:
+            warnings.extend(contract_evaluation["issues"])
+        contract_policy = req.fail_policy
+        if contract_evaluation["repair_needed"] and contract_policy == "block":
+            final = ""
+            blocked = True
+        elif contract_evaluation["repair_needed"] and contract_policy == "raw":
+            final = raw
+        elif contract_evaluation["repair_needed"] and contract_policy == "repair":
+            repair_messages = self.stabilizer.build_contract_repair_messages(messages, raw, resolved, contract_evaluation)
+            try:
+                repair_response = await adapter.generate(req.model, repair_messages, temperature=0.1, max_tokens=req.max_tokens, think=req.think)
+                final = repair_response.content
+                repaired = True
+                contract_evaluation = evaluate_contracts(final, resolved)
+                if contract_evaluation["repair_needed"]:
+                    warnings.extend(contract_evaluation["issues"])
+            except Exception as exc:
+                warnings.append(f"Contract repair failed: {exc}")
+        if not blocked and enabled and evaluation["core_match"] < threshold:
+            repair_messages = self.stabilizer.build_repair_messages(messages, final, resolved, evaluation)
             try:
                 repair_response = await adapter.generate(req.model, repair_messages, temperature=0.2, max_tokens=req.max_tokens, think=req.think)
                 final = repair_response.content
                 repaired = True
                 evaluation = score_text(final, resolved)
+                contract_evaluation = evaluate_contracts(final, resolved)
             except Exception:
                 final = raw
-        warnings = []
         if raw_response.done_reason == "length":
             warnings.append("Model output stopped because it hit max_tokens. Increase --max-tokens for a complete answer.")
         return {
             "content": final,
             "raw_content": raw,
             "repaired": repaired,
+            "blocked": blocked,
             "warnings": warnings,
             "debug": {
                 "mode": mode,
                 "resolved": resolved.model_dump(),
                 "compiled_prompt": system_prompt,
                 "evaluation": evaluation,
+                "contract_evaluation": contract_evaluation,
+                "fail_policy": contract_policy,
                 "model_response": {"done_reason": raw_response.done_reason, "usage": raw_response.usage},
                 "warnings": warnings,
             },

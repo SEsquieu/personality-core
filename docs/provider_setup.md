@@ -2,6 +2,8 @@
 
 Personality Core routes model calls by model prefix. The workbench uses the same selected model for stack runs, comparisons, and model-assisted core drafting.
 
+Provider setup also affects behavior contract repair. If a stack uses `fail_policy: repair`, the same selected model is called again to repair contract drift.
+
 ## Quick Start
 
 ```bash

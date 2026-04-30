@@ -56,6 +56,8 @@ Core Creator mode lets users load a valid JSON template, draft through the selec
 
 The Runtime panel exposes provider model examples and a `Test Provider` check so users can verify Ollama, OpenAI, OpenRouter, or LM Studio before spending a longer generation on stack output or core drafting.
 
+The Runtime panel also exposes contract fail policy. For contract cores such as `structured_json_output_core`, users can choose whether drift should warn, repair, block, or return raw output.
+
 The core interaction is:
 
 ```text

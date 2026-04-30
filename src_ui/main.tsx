@@ -35,11 +35,13 @@ type ResolvedStack = {
   active_cores: Array<{ id: string; name: string; strength: number }>;
   core_trace: Array<{ id: string; name: string; strength: number; trait_effects: Record<string, number> }>;
   conflicts: Array<{ cores: string[]; reason: string; resolution: string }>;
+  contracts: Array<Record<string, unknown>>;
 };
 
 type RunResult = {
   content?: string;
   warnings?: string[];
+  blocked?: boolean;
   debug?: {
     mode: string;
     resolved: ResolvedStack;
@@ -48,6 +50,12 @@ type RunResult = {
       core_scores: Record<string, number>;
       issues: string[];
     };
+    contract_evaluation?: {
+      ok: boolean;
+      repair_needed: boolean;
+      issues: string[];
+    };
+    fail_policy?: string;
     model_response: {
       done_reason: string | null;
     };
@@ -122,6 +130,7 @@ function App() {
   const [prompt, setPrompt] = useState(DEMOS.retry_loop);
   const [model, setModel] = useState("ollama/gemma4:e4b");
   const [maxTokens, setMaxTokens] = useState(360);
+  const [failPolicy, setFailPolicy] = useState<"warn" | "repair" | "block" | "raw">("repair");
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [compareResults, setCompareResults] = useState<CompareResult[]>([]);
   const [activeCompare, setActiveCompare] = useState("professional_support");
@@ -179,6 +188,7 @@ function App() {
       prompt,
       cores: stack,
       max_tokens: maxTokens,
+      fail_policy: failPolicy,
       think: false
     };
   }
@@ -234,6 +244,7 @@ function App() {
         prompt,
         personalities: selectedPersonalities,
         max_tokens: maxTokens,
+        fail_policy: failPolicy,
         think: false
       });
       setCompareResults(data.results ?? []);
@@ -398,9 +409,11 @@ function App() {
             maxTokens={maxTokens}
             providers={providers}
             status={providerStatus}
+            failPolicy={failPolicy}
             loading={loading}
             onModelChange={setModel}
             onMaxTokensChange={setMaxTokens}
+            onFailPolicyChange={setFailPolicy}
             onTestProvider={testProvider}
           />
         </CollapsibleSection>
@@ -559,6 +572,18 @@ function App() {
               </section>
             )}
 
+            {activeResolved.contracts.length > 0 && (
+              <section className="diag-section">
+                <h3>Contracts</h3>
+                {activeResolved.contracts.map((contract, index) => (
+                  <div className="conflict-row" key={`${contract.core_id}-${index}`}>
+                    <strong>{String(contract.core_name ?? contract.core_id ?? "contract")}</strong>
+                    <span>{String(contract.type ?? "behavior")}</span>
+                  </div>
+                ))}
+              </section>
+            )}
+
             <section className="diag-section">
               <h3>Core Trace</h3>
               {activeResolved.core_trace.map((trace) => (
@@ -689,18 +714,22 @@ function RuntimeControls({
   maxTokens,
   providers,
   status,
+  failPolicy,
   loading,
   onModelChange,
   onMaxTokensChange,
+  onFailPolicyChange,
   onTestProvider
 }: {
   model: string;
   maxTokens: number;
   providers: ProviderInfo[];
   status: string;
+  failPolicy: "warn" | "repair" | "block" | "raw";
   loading: string;
   onModelChange: (value: string) => void;
   onMaxTokensChange: (value: number) => void;
+  onFailPolicyChange: (value: "warn" | "repair" | "block" | "raw") => void;
   onTestProvider: () => void;
 }) {
   const activeProvider = providers.find((provider) =>
@@ -738,6 +767,16 @@ function RuntimeControls({
       <div className="field-group">
         <label>Token Cap: {maxTokens}</label>
         <input type="range" min="120" max="1200" step="20" value={maxTokens} onChange={(event) => onMaxTokensChange(Number(event.target.value))} />
+      </div>
+
+      <div className="field-group">
+        <label>Contract Fail Policy</label>
+        <select value={failPolicy} onChange={(event) => onFailPolicyChange(event.target.value as "warn" | "repair" | "block" | "raw")}>
+          <option value="repair">Repair drift</option>
+          <option value="warn">Warn only</option>
+          <option value="block">Block bad output</option>
+          <option value="raw">Return raw output</option>
+        </select>
       </div>
 
       <button className="secondary-button provider-test" onClick={onTestProvider} disabled={loading !== ""}>
@@ -841,6 +880,7 @@ function StackOutput({ result, compiledPrompt }: { result: RunResult | null; com
           {warning}
         </div>
       ))}
+      {result?.blocked && <div className="warning-strip">Contract policy blocked the model output.</div>}
       {result?.content && (
         <>
           <div className="output-header">
@@ -850,12 +890,19 @@ function StackOutput({ result, compiledPrompt }: { result: RunResult | null; com
             </div>
             <div className="badge-row">
               <MetricBadge icon={<Gauge size={15} />} label="match" value={result.debug?.evaluation.core_match.toFixed(2) ?? "--"} />
+              <MetricBadge icon={<Settings2 size={15} />} label="contract" value={result.debug?.contract_evaluation?.ok ? "ok" : result.debug?.contract_evaluation ? "drift" : "--"} />
               <MetricBadge icon={<Settings2 size={15} />} label="done" value={result.debug?.model_response.done_reason ?? "stop"} />
             </div>
           </div>
           <div className="response-text">{result.content}</div>
         </>
       )}
+      {result?.debug?.contract_evaluation?.issues?.length ? (
+        <details className="compiled-prompt">
+          <summary>Contract Issues</summary>
+          <pre>{result.debug.contract_evaluation.issues.join("\n")}</pre>
+        </details>
+      ) : null}
       {compiledPrompt && (
         <details className="compiled-prompt">
           <summary>Compiled Prompt</summary>
@@ -907,6 +954,7 @@ function CompareOutput({
               </div>
               <div className="badge-row">
                 <MetricBadge icon={<Gauge size={15} />} label="match" value={activeResult.debug?.evaluation.core_match.toFixed(2) ?? "--"} />
+                <MetricBadge icon={<Settings2 size={15} />} label="contract" value={activeResult.debug?.contract_evaluation?.ok ? "ok" : activeResult.debug?.contract_evaluation ? "drift" : "--"} />
                 <MetricBadge icon={<Settings2 size={15} />} label="done" value={activeResult.debug?.model_response.done_reason ?? "stop"} />
               </div>
             </div>

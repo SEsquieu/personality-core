@@ -86,6 +86,7 @@ Every core is a JSON object with this shape:
   "version": "0.1.0",
   "description": "A starting point for a hand-authored personality core.",
   "author": "local",
+  "kind": "personality",
   "trait_deltas": {
     "directness": 0.25,
     "warmth": 0.15,
@@ -110,6 +111,7 @@ Every core is a JSON object with this shape:
     "directness": 0.6,
     "technicality": 0.4
   },
+  "contracts": [],
   "conflicts_with": [],
   "examples": [
     {
@@ -124,10 +126,12 @@ Field guide:
 
 - `id`: lowercase snake_case identifier, ending in `_core`
 - `trait_deltas`: numeric pushes from `-1.0` to `1.0`
+- `kind`: behavior category, such as `personality`, `format`, `safety`, `reasoning`, `workflow`, or `domain`
 - `default_strength`: default stack strength from `0.0` to `1.0`
 - `rules`: visible behavior instructions the compiler can preserve
 - `boundaries`: hard limits that should survive personality styling
 - `evaluation_weights`: scoring hints for drift checks
+- `contracts`: machine-checkable output requirements, such as valid JSON shape
 - `examples`: style anchors for humans today, and richer evaluators later
 
 ## Safety

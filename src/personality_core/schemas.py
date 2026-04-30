@@ -22,6 +22,7 @@ class ChatCompletionRequest(BaseModel):
     personality: str | None = None
     cores: list[CoreRef] = Field(default_factory=list)
     stabilizer: StabilizerConfig | bool | None = None
+    fail_policy: Literal["warn", "repair", "block", "raw"] = "warn"
     repair: bool | None = None
     debug: bool = False
     temperature: float | None = None
@@ -47,6 +48,7 @@ class StackRequest(BaseModel):
     temperature: float | None = None
     think: bool | str | None = False
     stabilizer: StabilizerConfig | bool | None = None
+    fail_policy: Literal["warn", "repair", "block", "raw"] = "warn"
 
 class CoreDraftRequest(BaseModel):
     intent: str
@@ -74,12 +76,14 @@ class CoreDefinition(BaseModel):
     version: str = "0.1.0"
     description: str = ""
     author: str = "unknown"
+    kind: str = "personality"
     trait_deltas: dict[str, float] = Field(default_factory=dict)
     default_strength: float = 0.5
     params: dict[str, Any] = Field(default_factory=dict)
     rules: list[str] = Field(default_factory=list)
     boundaries: dict[str, bool] = Field(default_factory=dict)
     evaluation_weights: dict[str, float] = Field(default_factory=dict)
+    contracts: list[dict[str, Any]] = Field(default_factory=list)
     conflicts_with: list[dict[str, str]] = Field(default_factory=list)
     examples: list[dict[str, str]] = Field(default_factory=list)
 
@@ -88,6 +92,7 @@ class ResolvedStack(BaseModel):
     resolved_traits: dict[str, float] = Field(default_factory=dict)
     boundaries: dict[str, bool] = Field(default_factory=dict)
     rules: list[str] = Field(default_factory=list)
+    contracts: list[dict[str, Any]] = Field(default_factory=list)
     active_cores: list[dict[str, Any]] = Field(default_factory=list)
     core_trace: list[dict[str, Any]] = Field(default_factory=list)
     conflicts: list[dict[str, Any]] = Field(default_factory=list)

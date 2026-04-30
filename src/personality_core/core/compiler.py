@@ -58,6 +58,21 @@ class CoreCompiler:
             lines.append("Core rules:")
             for r in resolved.rules[:16]:
                 lines.append(f"- {r}")
+        if resolved.contracts:
+            lines.append("Output contracts:")
+            for contract in resolved.contracts[:8]:
+                contract_type = contract.get("type", "behavior")
+                lines.append(f"- {contract.get('core_name', contract.get('core_id', 'core'))}: {contract_type}")
+                if contract_type == "json_object":
+                    lines.append("  Return exactly one valid JSON object. Do not wrap it in markdown or prose.")
+                    required = contract.get("required_fields", [])
+                    if required:
+                        lines.append("  Required fields: " + ", ".join(str(field) for field in required) + ".")
+                    schema = contract.get("schema")
+                    if schema:
+                        lines.append("  JSON schema: " + json.dumps(schema, separators=(",", ":")))
+                for instruction in contract.get("instructions", [])[:4]:
+                    lines.append(f"  {instruction}")
         if resolved.boundaries:
             lines.append("Hard boundaries:")
             for k, v in resolved.boundaries.items():
