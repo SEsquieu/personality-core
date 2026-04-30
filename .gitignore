@@ -11,3 +11,4 @@ docs/*handoff*.md
 node_modules/
 dist/
 *.tsbuildinfo
+tmp*/

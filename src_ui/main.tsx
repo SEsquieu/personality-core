@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { AlertTriangle, BrainCircuit, ChevronDown, FlaskConical, Gauge, Play, Settings2, SlidersHorizontal, Trash2 } from "lucide-react";
+import { AlertTriangle, BrainCircuit, ChevronDown, FlaskConical, Gauge, Play, Settings2, SlidersHorizontal, Sparkles, Trash2 } from "lucide-react";
 import "./styles.css";
 
 type CoreDefinition = {
@@ -66,7 +66,7 @@ const DEFAULT_STACK: CoreRef[] = [
 ];
 
 function App() {
-  const [mode, setMode] = useState<"stack" | "compare">("stack");
+  const [mode, setMode] = useState<"stack" | "compare" | "creator">("stack");
   const [cores, setCores] = useState<CoreDefinition[]>([]);
   const [personalities, setPersonalities] = useState<Personality[]>([]);
   const [selectedPersonalities, setSelectedPersonalities] = useState<string[]>(DEFAULT_PERSONALITIES);
@@ -81,6 +81,10 @@ function App() {
   const [compiledPrompt, setCompiledPrompt] = useState("");
   const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
+  const [creatorIntent, setCreatorIntent] = useState("A concise technical reviewer that leads with risks and gives concrete fixes.");
+  const [creatorName, setCreatorName] = useState("Concise Review Core");
+  const [creatorJson, setCreatorJson] = useState("");
+  const [creatorStatus, setCreatorStatus] = useState("");
 
   useEffect(() => {
     void loadCatalog();
@@ -202,6 +206,62 @@ function App() {
     setStack((current) => [...current, { id: coreId, strength: core?.default_strength ?? 0.5 }]);
   }
 
+  async function draftCore() {
+    setLoading("draft-core");
+    setError("");
+    setCreatorStatus("");
+    try {
+      const data = await postJson<{ core: CoreDefinition }>("/v1/cores/draft", {
+        intent: creatorIntent,
+        name: creatorName || undefined
+      });
+      setCreatorJson(JSON.stringify(data.core, null, 2));
+      setCreatorStatus("Draft ready. Review the JSON, then validate or install.");
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading("");
+    }
+  }
+
+  async function validateCreatedCore() {
+    setLoading("validate-core");
+    setError("");
+    setCreatorStatus("");
+    try {
+      const core = JSON.parse(creatorJson);
+      const data = await postJson<{ core: CoreDefinition }>("/v1/cores/validate", { core });
+      setCreatorJson(JSON.stringify(data.core, null, 2));
+      setCreatorStatus("Core is valid.");
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading("");
+    }
+  }
+
+  async function installCreatedCore() {
+    setLoading("install-core");
+    setError("");
+    setCreatorStatus("");
+    try {
+      const core = JSON.parse(creatorJson);
+      const data = await postJson<{ core: CoreDefinition }>("/v1/cores/install", { core });
+      await loadCatalog();
+      setStack((current) =>
+        current.some((item) => item.id === data.core.id)
+          ? current
+          : [...current, { id: data.core.id, strength: data.core.default_strength }]
+      );
+      setMode("stack");
+      setCreatorStatus(`Installed ${data.core.name} and added it to the active stack.`);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading("");
+    }
+  }
+
   return (
     <div className="app-shell">
       <aside className="core-panel">
@@ -220,9 +280,12 @@ function App() {
           <button className={mode === "compare" ? "active" : ""} onClick={() => setMode("compare")}>
             Compare
           </button>
+          <button className={mode === "creator" ? "active" : ""} onClick={() => setMode("creator")}>
+            Core Creator
+          </button>
         </div>
 
-        {mode === "stack" && (
+        {mode !== "compare" && (
           <div className="stack-summary">
             <strong>{stack.length} cores installed</strong>
             <span>Top traits: {stackSummary.topTraits || "resolve stack"}</span>
@@ -265,19 +328,25 @@ function App() {
               setStack((current) => current.map((item) => (item.id === coreId ? { ...item, strength } : item)))
             }
           />
-        ) : (
+        ) : mode === "compare" ? (
           <CompareControls personalities={personalities} selected={selectedPersonalities} onSelectedChange={setSelectedPersonalities} />
+        ) : (
+          <CollapsibleSection title="Creator Notes" defaultOpen>
+            <p className="muted">Draft a schema-valid core, validate it, then install it into the local core registry.</p>
+          </CollapsibleSection>
         )}
       </aside>
 
       <main className="workbench">
         <div className="topbar">
           <div>
-            <h2>{mode === "stack" ? "Core Stack Editor" : "Compare Personality Stacks"}</h2>
+            <h2>{mode === "stack" ? "Core Stack Editor" : mode === "compare" ? "Compare Personality Stacks" : "Core Creator"}</h2>
             <p>
               {mode === "stack"
                 ? "Tune installed cores, resolve the stack, compile the prompt, then run it in-chain."
-                : "Same prompt, same model, different saved core stacks."}
+                : mode === "compare"
+                  ? "Same prompt, same model, different saved core stacks."
+                  : "Create a clean JSON core, validate it, and install it into the active stack."}
             </p>
           </div>
           {mode === "stack" ? (
@@ -295,15 +364,41 @@ function App() {
                 {loading === "run" ? "Running" : "Run Stack"}
               </button>
             </div>
-          ) : (
+          ) : mode === "compare" ? (
             <button className="run-button" onClick={runCompare} disabled={loading !== "" || selectedPersonalities.length === 0}>
               <Play size={18} />
               {loading === "compare" ? "Running" : "Run Compare"}
             </button>
+          ) : (
+            <div className="button-row">
+              <button className="secondary-button" onClick={draftCore} disabled={loading !== ""}>
+                <Sparkles size={17} />
+                Draft
+              </button>
+              <button className="secondary-button" onClick={validateCreatedCore} disabled={loading !== "" || !creatorJson}>
+                <Settings2 size={17} />
+                Validate
+              </button>
+              <button className="run-button" onClick={installCreatedCore} disabled={loading !== "" || !creatorJson}>
+                Install
+              </button>
+            </div>
           )}
         </div>
 
-        <textarea className="prompt-box" value={prompt} onChange={(event) => setPrompt(event.target.value)} />
+        {mode === "creator" ? (
+          <CoreCreator
+            intent={creatorIntent}
+            name={creatorName}
+            coreJson={creatorJson}
+            status={creatorStatus}
+            onIntentChange={setCreatorIntent}
+            onNameChange={setCreatorName}
+            onCoreJsonChange={setCreatorJson}
+          />
+        ) : (
+          <textarea className="prompt-box" value={prompt} onChange={(event) => setPrompt(event.target.value)} />
+        )}
 
         {error && (
           <div className="error-strip">
@@ -312,7 +407,7 @@ function App() {
           </div>
         )}
 
-        {mode === "stack" ? (
+        {mode === "creator" ? null : mode === "stack" ? (
           <StackOutput result={runResult} compiledPrompt={compiledPrompt} />
         ) : (
           <CompareOutput
@@ -513,6 +608,42 @@ function CompareControls({
         ))}
       </div>
     </CollapsibleSection>
+  );
+}
+
+function CoreCreator({
+  intent,
+  name,
+  coreJson,
+  status,
+  onIntentChange,
+  onNameChange,
+  onCoreJsonChange
+}: {
+  intent: string;
+  name: string;
+  coreJson: string;
+  status: string;
+  onIntentChange: (value: string) => void;
+  onNameChange: (value: string) => void;
+  onCoreJsonChange: (value: string) => void;
+}) {
+  return (
+    <section className="creator-surface">
+      <div className="creator-grid">
+        <div>
+          <label>Core Name</label>
+          <input value={name} onChange={(event) => onNameChange(event.target.value)} />
+        </div>
+        <div>
+          <label>Intent</label>
+          <textarea value={intent} onChange={(event) => onIntentChange(event.target.value)} />
+        </div>
+      </div>
+      {status && <div className="success-strip">{status}</div>}
+      <label>Core JSON</label>
+      <textarea className="json-editor" value={coreJson} onChange={(event) => onCoreJsonChange(event.target.value)} placeholder="Draft a core to begin." />
+    </section>
   );
 }
 

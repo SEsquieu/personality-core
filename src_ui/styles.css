@@ -158,7 +158,7 @@ textarea {
 
 .mode-switch {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 8px;
   margin-bottom: 24px;
 }
@@ -410,7 +410,8 @@ textarea {
 }
 
 .error-strip,
-.warning-strip {
+.warning-strip,
+.success-strip {
   gap: 10px;
   margin-top: 14px;
   padding: 11px 12px;
@@ -425,6 +426,12 @@ textarea {
 .warning-strip {
   background: #3b3219;
   color: #ffe4a1;
+}
+
+.success-strip {
+  background: #18352d;
+  color: #bff7df;
+  margin-bottom: 14px;
 }
 
 .result-tabs {
@@ -453,6 +460,41 @@ textarea {
   border-radius: 8px;
   background: #0f171a;
   padding: 20px;
+}
+
+.creator-surface {
+  margin-top: 20px;
+  border: 1px solid #27343a;
+  border-radius: 8px;
+  background: #0f171a;
+  padding: 20px;
+}
+
+.creator-surface label {
+  display: block;
+  margin-bottom: 10px;
+  color: #b9c6ca;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.creator-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(320px, 1.3fr);
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.creator-grid textarea {
+  min-height: 94px;
+}
+
+.json-editor {
+  min-height: 420px;
+  font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .empty-state {
@@ -612,5 +654,9 @@ li + li {
 
   .run-button {
     width: 100%;
+  }
+
+  .creator-grid {
+    grid-template-columns: 1fr;
   }
 }

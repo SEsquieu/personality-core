@@ -48,6 +48,15 @@ class StackRequest(BaseModel):
     think: bool | str | None = False
     stabilizer: StabilizerConfig | bool | None = None
 
+class CoreDraftRequest(BaseModel):
+    intent: str
+    name: str | None = None
+    author: str = "local"
+
+class CoreInstallRequest(BaseModel):
+    core: dict[str, Any]
+    overwrite: bool = False
+
 class CoreDefinition(BaseModel):
     id: str
     name: str
