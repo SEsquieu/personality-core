@@ -16,6 +16,14 @@ from personality_core.core.compiler import CoreCompiler
 
 app = typer.Typer(help="Personality Core CLI")
 
+DEMO_PROMPTS = {
+    "retry_loop": "Explain why retries hide real errors.",
+    "angry_customer": "A customer is angry because their export failed twice. Draft the response.",
+    "code_review": "Review this pattern: a retry loop mutates shared state and swallows the original exception.",
+    "startup_pitch": "Pressure-test my idea for an AI-powered meeting notes app.",
+    "debugging": "Explain why mutating shared state inside a retry loop is dangerous.",
+}
+
 @app.command()
 def serve(host: str = "127.0.0.1", port: int = 8787):
     """Run the OpenAI-compatible proxy server."""
@@ -109,20 +117,35 @@ def compare(
     temperature: float | None = None,
     think: bool = False,
     show_prompt: bool = False,
+    demo: str | None = None,
+    summary_only: bool = typer.Option(False, "--summary", help="Show diagnostics only, without full model responses."),
+    json_output: bool = typer.Option(False, "--json", help="Print machine-readable JSON instead of Rich panels."),
+    save: Path | None = None,
 ):
     """Run one prompt through several personality presets."""
+    if demo:
+        try:
+            prompt = DEMO_PROMPTS[demo]
+        except KeyError as exc:
+            print(f"[red]Unknown demo prompt:[/red] {demo}")
+            print("Available demos: " + ", ".join(sorted(DEMO_PROMPTS)))
+            raise typer.Exit(code=1) from exc
     selected = [p.strip() for p in personalities.split(",") if p.strip()]
     if not selected:
         print("[red]No personalities selected.[/red]")
         raise typer.Exit(code=1)
 
-    print("[bold]Personality Core comparison[/bold]")
-    print(f"Model: [bold]{model}[/bold]")
-    if show_prompt:
-        print(f"Prompt: {prompt}")
-    print()
+    if not json_output:
+        print("[bold]Personality Core comparison[/bold]")
+        print(f"Model: [bold]{model}[/bold]")
+        if demo:
+            print(f"Demo: [bold]{demo}[/bold]")
+        if show_prompt:
+            print(f"Prompt: {prompt}")
+        print()
 
     pipeline = PersonalityPipeline(DEFAULT_CORES_DIR, DEFAULT_PERSONALITIES_DIR, DEFAULT_MODEL_PROFILES_DIR)
+    records = []
     for persona_id in selected:
         req = ChatCompletionRequest(
             model=model,
@@ -136,29 +159,64 @@ def compare(
         try:
             result = asyncio.run(pipeline.run(req))
         except KeyError as exc:
-            print(Panel(str(exc), title=f"{persona_id}", border_style="red"))
+            record = {"personality": persona_id, "error": str(exc)}
+            records.append(record)
+            if not json_output:
+                print(Panel(str(exc), title=f"{persona_id}", border_style="red"))
             continue
         except ModelAdapterError as exc:
-            print(Panel(str(exc), title="Model backend error", border_style="red"))
+            if json_output:
+                print_json({"error": str(exc), "model": model, "prompt": prompt, "results": records})
+            else:
+                print(Panel(str(exc), title="Model backend error", border_style="red"))
             raise typer.Exit(code=1) from exc
 
         debug = result["debug"]
         evaluation = debug["evaluation"]
         resolved = debug["resolved"]
+        record = {
+            "personality": persona_id,
+            "model": model,
+            "prompt": prompt,
+            "content": result["content"],
+            "warnings": result.get("warnings", []),
+            "mode": debug["mode"],
+            "done_reason": debug.get("model_response", {}).get("done_reason"),
+            "active_cores": [c["id"] for c in resolved["active_cores"]],
+            "core_match": evaluation["core_match"],
+            "core_scores": evaluation.get("core_scores", {}),
+            "issues": evaluation.get("issues", []),
+        }
+        records.append(record)
+        if json_output:
+            continue
+
         active = ", ".join(c["id"] for c in resolved["active_cores"])
+        core_scores = ", ".join(f"{k}={v}" for k, v in evaluation.get("core_scores", {}).items()) or "none"
         issues = "; ".join(evaluation.get("issues", [])) or "none"
         warnings = "; ".join(result.get("warnings", [])) or "none"
-        summary = (
+        panel_body = (
             f"[dim]cores:[/dim] {active}\n"
             f"[dim]core_match:[/dim] {evaluation['core_match']}  "
             f"[dim]mode:[/dim] {debug['mode']}  "
             f"[dim]done:[/dim] {debug.get('model_response', {}).get('done_reason')}\n"
+            f"[dim]core_scores:[/dim] {core_scores}\n"
             f"[dim]issues:[/dim] {issues}\n"
-            f"[dim]warnings:[/dim] {warnings}\n\n"
-            f"{result['content']}"
+            f"[dim]warnings:[/dim] {warnings}"
         )
-        print(Panel(summary, title=persona_id, border_style="cyan"))
+        if not summary_only:
+            panel_body += f"\n\n{result['content']}"
+        print(Panel(panel_body, title=persona_id, border_style="cyan"))
         print()
+
+    output = {"model": model, "prompt": prompt, "demo": demo, "results": records}
+    if save:
+        save.parent.mkdir(parents=True, exist_ok=True)
+        save.write_text(json.dumps(output, indent=2), encoding="utf-8")
+        if not json_output:
+            print(f"[green]Saved comparison:[/green] {save}")
+    if json_output:
+        print_json(output)
 
 @app.command()
 def demo(model: str = DEFAULT_MODEL):

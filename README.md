@@ -98,6 +98,16 @@ personality-core compare "Explain why retries hide real errors." \
 
 This is the fastest way to see the core stack idea in motion: same model, same prompt, different resolved behavior.
 
+Named demo prompts are built in:
+
+```bash
+personality-core compare --demo retry_loop --summary
+personality-core compare --demo angry_customer --json
+personality-core compare --demo code_review --save runs/code-review-demo.json
+```
+
+Available demos: `retry_loop`, `angry_customer`, `code_review`, `startup_pitch`, `debugging`.
+
 ### 6. Test the OpenAI-compatible endpoint
 
 ```bash
@@ -153,6 +163,8 @@ personality-core prompt --cores technical_core:0.9,sarcasm_core:0.7
 personality-core demo
 personality-core chat "Why is config drift a problem?" --cores technical_core:0.9,sarcasm_core:0.65 --debug
 personality-core compare "Explain retry loops like I am debugging production."
+personality-core compare --demo code_review --summary
+personality-core compare --demo retry_loop --json
 personality-core test --model ollama/gemma4:e4b --cores technical_core:0.95,sarcasm_core:0.7 --turns 3
 ```
 
@@ -169,6 +181,7 @@ PERSONALITY_CORE_MODEL_PROFILES_DIR=/path/to/model_profiles
 PERSONALITY_CORE_DEFAULT_MODEL=ollama/gemma4:e4b
 OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_TIMEOUT=300
+OPENAI_API_KEY=
 ```
 
 ## Core files

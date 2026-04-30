@@ -101,3 +101,5 @@ Each result prints:
 - generated response
 
 This command is meant to be the terminal demo for the project: same prompt, same model, different installed core stack.
+
+For the fuller compare workflow, including named demo prompts and JSON/save modes, see `docs/demo_kit.md`.
