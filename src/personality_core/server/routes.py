@@ -153,6 +153,9 @@ async def compare(req: CompareRequest):
             continue
         except ModelAdapterError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
+        except Exception as exc:
+            results.append({"personality": persona_id, "error": str(exc)})
+            continue
         results.append({"personality": persona_id, **result})
     return {"model": req.model, "prompt": req.prompt, "results": results}
 

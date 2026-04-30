@@ -38,6 +38,7 @@ class CompareRequest(BaseModel):
     temperature: float | None = None
     think: bool | str | None = False
     stabilizer: StabilizerConfig | bool | None = None
+    fail_policy: Literal["warn", "repair", "block", "raw"] = "warn"
 
 class StackRequest(BaseModel):
     model: str = "ollama/gemma4:e4b"
