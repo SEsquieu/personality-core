@@ -41,6 +41,8 @@ def test_bare_local_model_names_route_to_ollama():
 
     assert pipeline.adapter_for("gemma4:e4b") is pipeline.ollama
     assert pipeline.adapter_for("ollama/gemma4:e4b") is pipeline.ollama
+    assert pipeline.adapter_for("openrouter/openai/gpt-4o-mini") is pipeline.openrouter
+    assert pipeline.adapter_for("lmstudio/local-model") is pipeline.lmstudio
 
 
 def test_model_core_draft_normalizes_common_llm_json_variants():

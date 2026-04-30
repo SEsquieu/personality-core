@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { AlertTriangle, BrainCircuit, ChevronDown, FlaskConical, Gauge, Play, Settings2, SlidersHorizontal, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, BrainCircuit, ChevronDown, FlaskConical, Gauge, Play, Settings2, SlidersHorizontal, Sparkles, Trash2, Wifi } from "lucide-react";
 import "./styles.css";
 
 type CoreDefinition = {
@@ -20,6 +20,14 @@ type Personality = {
   name: string;
   description: string;
   cores: CoreRef[];
+};
+
+type ProviderInfo = {
+  id: string;
+  name: string;
+  model_examples: string[];
+  requires: string[];
+  env: string[];
 };
 
 type ResolvedStack = {
@@ -108,6 +116,7 @@ function App() {
   const [mode, setMode] = useState<"stack" | "compare" | "creator">("stack");
   const [cores, setCores] = useState<CoreDefinition[]>([]);
   const [personalities, setPersonalities] = useState<Personality[]>([]);
+  const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [selectedPersonalities, setSelectedPersonalities] = useState<string[]>(DEFAULT_PERSONALITIES);
   const [stack, setStack] = useState<CoreRef[]>(DEFAULT_STACK);
   const [prompt, setPrompt] = useState(DEMOS.retry_loop);
@@ -120,6 +129,7 @@ function App() {
   const [compiledPrompt, setCompiledPrompt] = useState("");
   const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
+  const [providerStatus, setProviderStatus] = useState("");
   const [creatorIntent, setCreatorIntent] = useState("A concise technical reviewer that leads with risks and gives concrete fixes.");
   const [creatorName, setCreatorName] = useState("Concise Review Core");
   const [creatorJson, setCreatorJson] = useState(CORE_TEMPLATE_JSON);
@@ -131,11 +141,14 @@ function App() {
 
   async function loadCatalog() {
     try {
-      const [coreRes, personaRes] = await Promise.all([fetch("/v1/cores"), fetch("/v1/personalities")]);
+      const [coreRes, personaRes, providerRes] = await Promise.all([fetch("/v1/cores"), fetch("/v1/personalities"), fetch("/v1/providers")]);
       const coreJson = await coreRes.json();
       const personaJson = await personaRes.json();
+      const providerJson = await providerRes.json();
       setCores(coreJson.data ?? []);
       setPersonalities(personaJson.data ?? []);
+      setProviders(providerJson.providers ?? []);
+      if (providerJson.default_model) setModel(providerJson.default_model);
     } catch {
       setError("Backend is not reachable. Start `personality-core serve --host 127.0.0.1 --port 8787`.");
     }
@@ -225,6 +238,30 @@ function App() {
       });
       setCompareResults(data.results ?? []);
       setActiveCompare((data.results?.[0]?.personality as string) ?? selectedPersonalities[0]);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading("");
+    }
+  }
+
+  async function testProvider() {
+    setLoading("provider-health");
+    setError("");
+    setProviderStatus("");
+    try {
+      const data = await postJson<{ ok: boolean; content?: string; error?: string }>("/v1/providers/health", {
+        model,
+        prompt: "Reply with OK.",
+        max_tokens: 24,
+        temperature: 0,
+        think: false
+      });
+      if (!data.ok) {
+        setProviderStatus(`Provider check failed: ${data.error ?? "unknown error"}`);
+        return;
+      }
+      setProviderStatus(`Provider ready: ${(data.content ?? "").trim() || "OK"}`);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -355,16 +392,17 @@ function App() {
           </div>
         )}
 
-        <CollapsibleSection title="Runtime" defaultOpen={false}>
-          <div className="field-group">
-            <label>Model</label>
-            <input value={model} onChange={(event) => setModel(event.target.value)} />
-          </div>
-
-          <div className="field-group">
-            <label>Token Cap: {maxTokens}</label>
-            <input type="range" min="120" max="1200" step="20" value={maxTokens} onChange={(event) => setMaxTokens(Number(event.target.value))} />
-          </div>
+        <CollapsibleSection title="Runtime" defaultOpen>
+          <RuntimeControls
+            model={model}
+            maxTokens={maxTokens}
+            providers={providers}
+            status={providerStatus}
+            loading={loading}
+            onModelChange={setModel}
+            onMaxTokensChange={setMaxTokens}
+            onTestProvider={testProvider}
+          />
         </CollapsibleSection>
 
         <CollapsibleSection title="Input" defaultOpen={false}>
@@ -643,6 +681,71 @@ function StackControls({
         </select>
       </CollapsibleSection>
     </>
+  );
+}
+
+function RuntimeControls({
+  model,
+  maxTokens,
+  providers,
+  status,
+  loading,
+  onModelChange,
+  onMaxTokensChange,
+  onTestProvider
+}: {
+  model: string;
+  maxTokens: number;
+  providers: ProviderInfo[];
+  status: string;
+  loading: string;
+  onModelChange: (value: string) => void;
+  onMaxTokensChange: (value: number) => void;
+  onTestProvider: () => void;
+}) {
+  const activeProvider = providers.find((provider) =>
+    model.startsWith(`${provider.id}/`) ||
+    (provider.id === "ollama" && !model.includes("/")) ||
+    (provider.id === "lmstudio" && model.startsWith("lm-studio/"))
+  );
+  const examples = providers.flatMap((provider) =>
+    provider.model_examples.map((example) => ({ provider: provider.name, model: example }))
+  );
+
+  return (
+    <div className="runtime-controls">
+      <div className="field-group">
+        <label>Model</label>
+        <input value={model} onChange={(event) => onModelChange(event.target.value)} />
+      </div>
+
+      <div className="quick-models">
+        {examples.slice(0, 8).map((example) => (
+          <button key={example.model} className={model === example.model ? "active" : ""} onClick={() => onModelChange(example.model)} title={example.provider}>
+            {example.model}
+          </button>
+        ))}
+      </div>
+
+      {activeProvider && (
+        <div className="provider-card">
+          <strong>{activeProvider.name}</strong>
+          <span>Needs: {activeProvider.requires.join(", ")}</span>
+          <span>Env: {activeProvider.env.join(", ")}</span>
+        </div>
+      )}
+
+      <div className="field-group">
+        <label>Token Cap: {maxTokens}</label>
+        <input type="range" min="120" max="1200" step="20" value={maxTokens} onChange={(event) => onMaxTokensChange(Number(event.target.value))} />
+      </div>
+
+      <button className="secondary-button provider-test" onClick={onTestProvider} disabled={loading !== ""}>
+        <Wifi size={16} />
+        {loading === "provider-health" ? "Testing" : "Test Provider"}
+      </button>
+      {status && <div className={status.includes("failed") ? "provider-status failed" : "provider-status"}>{status}</div>}
+    </div>
   );
 }
 

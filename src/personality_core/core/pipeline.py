@@ -10,6 +10,14 @@ from personality_core.scoring.heuristic import score_text
 from personality_core.core.stabilizer import Stabilizer
 from personality_core.adapters.ollama import OllamaAdapter
 from personality_core.adapters.openai import OpenAIAdapter
+from personality_core.config import (
+    LM_STUDIO_BASE_URL,
+    OPENROUTER_API_KEY,
+    OPENROUTER_APP_NAME,
+    OPENROUTER_BASE_URL,
+    OPENROUTER_SITE_URL,
+    OPENAI_BASE_URL,
+)
 
 class PersonalityPipeline:
     def __init__(self, cores_dir: Path, personalities_dir: Path, model_profiles_dir: Path):
@@ -20,10 +28,23 @@ class PersonalityPipeline:
         self.stabilizer = Stabilizer()
         self.ollama = OllamaAdapter()
         self.openai = OpenAIAdapter()
+        openrouter_headers = {}
+        if OPENROUTER_SITE_URL:
+            openrouter_headers["HTTP-Referer"] = OPENROUTER_SITE_URL
+        if OPENROUTER_APP_NAME:
+            openrouter_headers["X-Title"] = OPENROUTER_APP_NAME
+        self.openrouter = OpenAIAdapter(api_key=OPENROUTER_API_KEY, base_url=OPENROUTER_BASE_URL, extra_headers=openrouter_headers)
+        self.lmstudio = OpenAIAdapter(api_key="", base_url=LM_STUDIO_BASE_URL)
 
     def adapter_for(self, model: str):
         if model.startswith("ollama/") or "/" not in model:
             return self.ollama
+        if model.startswith("openrouter/"):
+            return self.openrouter
+        if model.startswith("lmstudio/") or model.startswith("lm-studio/"):
+            return self.lmstudio
+        if model.startswith("openai/") or OPENAI_BASE_URL:
+            return self.openai
         return self.openai
 
     async def run(self, req: ChatCompletionRequest) -> dict:

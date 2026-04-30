@@ -61,6 +61,13 @@ class CoreInstallRequest(BaseModel):
     core: dict[str, Any]
     overwrite: bool = False
 
+class ProviderHealthRequest(BaseModel):
+    model: str
+    prompt: str = "Reply with OK."
+    max_tokens: int | None = 24
+    temperature: float | None = 0.0
+    think: bool | str | None = False
+
 class CoreDefinition(BaseModel):
     id: str
     name: str

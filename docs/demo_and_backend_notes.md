@@ -38,6 +38,8 @@ personality-core chat "Why is config drift painful?" --model "llama3.2:3b"
 
 Models with the `ollama/` prefix route through the Ollama adapter. Bare local model names such as `llama3.2:3b` also route through Ollama so the workbench behaves naturally for local-model users.
 
+Provider setup details live in [provider_setup.md](provider_setup.md). The workbench Runtime panel also exposes model examples and a provider health check.
+
 Relevant environment variables:
 
 ```bash

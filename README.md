@@ -154,6 +154,8 @@ The workbench loads cores and personality presets from the API. The default Stac
 
 Core Creator mode starts with a valid JSON template, can draft a schema-valid core from a plain-language behavior intent through the selected model endpoint, lets you edit the JSON, validates it, installs it into `cores/`, and adds it to the active stack.
 
+Use the Runtime panel to pick a provider model and run `Test Provider` before running a stack. Supported model prefixes include `ollama/`, bare Ollama model names, `openai/`, `openrouter/`, and `lmstudio/`. See [docs/provider_setup.md](docs/provider_setup.md).
+
 ## Python client example
 
 ```python

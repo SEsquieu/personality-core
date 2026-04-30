@@ -54,6 +54,8 @@ Each installed core is a compact row with its strength visible. Expanding a row 
 
 Core Creator mode lets users load a valid JSON template, draft through the selected model endpoint, edit, validate, and install new core JSON files. Installed cores are immediately available in the Stack Editor.
 
+The Runtime panel exposes provider model examples and a `Test Provider` check so users can verify Ollama, OpenAI, OpenRouter, or LM Studio before spending a longer generation on stack output or core drafting.
+
 The core interaction is:
 
 ```text
@@ -73,6 +75,8 @@ The frontend uses native Personality Core routes:
 - `GET /v1/cores`
 - `GET /v1/cores/template`
 - `GET /v1/personalities`
+- `GET /v1/providers`
+- `POST /v1/providers/health`
 - `POST /v1/cores/draft`
 - `POST /v1/cores/validate`
 - `POST /v1/cores/install`

@@ -4,10 +4,10 @@ from pathlib import Path
 import re
 from fastapi import APIRouter, HTTPException
 from personality_core.adapters.base import ModelAdapterError
-from personality_core.schemas import ChatCompletionRequest, ChatMessage, CompareRequest, CoreDraftRequest, CoreInstallRequest, StackRequest
+from personality_core.schemas import ChatCompletionRequest, ChatMessage, CompareRequest, CoreDraftRequest, CoreInstallRequest, ProviderHealthRequest, StackRequest
 from personality_core.core.mode_detector import detect_mode
 from personality_core.core.pipeline import PersonalityPipeline
-from personality_core.config import DEFAULT_CORES_DIR, DEFAULT_PERSONALITIES_DIR, DEFAULT_MODEL_PROFILES_DIR
+from personality_core.config import DEFAULT_CORES_DIR, DEFAULT_PERSONALITIES_DIR, DEFAULT_MODEL_PROFILES_DIR, DEFAULT_MODEL
 from personality_core.server.openai_compat import chat_completion_response
 
 router = APIRouter()
@@ -20,6 +20,63 @@ def health():
 @router.get("/v1/cores")
 def list_cores():
     return {"data": [c.model_dump() for c in pipeline.registry.list()]}
+
+@router.get("/v1/providers")
+def list_providers():
+    return {
+        "default_model": DEFAULT_MODEL,
+        "providers": [
+            {
+                "id": "ollama",
+                "name": "Ollama",
+                "model_examples": ["ollama/gemma4:e4b", "ollama/llama3.2:3b", "gemma4:e4b"],
+                "requires": ["Ollama running locally"],
+                "env": ["OLLAMA_BASE_URL", "OLLAMA_TIMEOUT", "PERSONALITY_CORE_DEFAULT_MODEL"],
+            },
+            {
+                "id": "openai",
+                "name": "OpenAI",
+                "model_examples": ["openai/gpt-4.1-mini", "openai/gpt-4o-mini"],
+                "requires": ["OPENAI_API_KEY"],
+                "env": ["OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_TIMEOUT"],
+            },
+            {
+                "id": "openrouter",
+                "name": "OpenRouter",
+                "model_examples": ["openrouter/openai/gpt-4o-mini", "openrouter/meta-llama/llama-3.1-8b-instruct"],
+                "requires": ["OPENROUTER_API_KEY"],
+                "env": ["OPENROUTER_API_KEY", "OPENROUTER_BASE_URL", "OPENROUTER_SITE_URL", "OPENROUTER_APP_NAME"],
+            },
+            {
+                "id": "lmstudio",
+                "name": "LM Studio",
+                "model_examples": ["lmstudio/local-model"],
+                "requires": ["LM Studio local server running"],
+                "env": ["LM_STUDIO_BASE_URL"],
+            },
+        ],
+    }
+
+@router.post("/v1/providers/health")
+async def provider_health(req: ProviderHealthRequest):
+    try:
+        adapter = pipeline.adapter_for(req.model)
+        response = await adapter.generate(
+            req.model,
+            [{"role": "user", "content": req.prompt}],
+            temperature=req.temperature,
+            max_tokens=req.max_tokens,
+            think=req.think,
+        )
+    except ModelAdapterError as exc:
+        return {"ok": False, "model": req.model, "error": str(exc)}
+    return {
+        "ok": True,
+        "model": req.model,
+        "content": response.content,
+        "done_reason": response.done_reason,
+        "usage": response.usage,
+    }
 
 @router.get("/v1/cores/template")
 def core_template():

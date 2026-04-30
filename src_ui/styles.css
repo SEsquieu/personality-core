@@ -144,6 +144,67 @@ textarea {
   gap: 8px;
 }
 
+.runtime-controls {
+  display: grid;
+  gap: 12px;
+}
+
+.quick-models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.quick-models button {
+  border-radius: 7px;
+  background: #162227;
+  color: #bdd1d8;
+  font-size: 12px;
+  padding: 7px 9px;
+}
+
+.quick-models button.active {
+  background: #25414a;
+  color: #f0fbff;
+}
+
+.provider-card {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #2d3b41;
+  border-radius: 8px;
+  background: #0d1417;
+  padding: 10px;
+}
+
+.provider-card strong {
+  color: #f3d35c;
+}
+
+.provider-card span,
+.provider-status {
+  color: #91a0a7;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.provider-test {
+  justify-content: center;
+}
+
+.provider-status {
+  border: 1px solid #28464a;
+  border-radius: 7px;
+  background: #0d1c1f;
+  padding: 8px 10px;
+}
+
+.provider-status.failed {
+  border-color: #613337;
+  background: #2b1719;
+  color: #f2c9c9;
+}
+
 .demo-grid button,
 .result-tabs button,
 .run-button,
