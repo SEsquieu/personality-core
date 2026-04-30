@@ -7,6 +7,15 @@ class PersonaStore:
     def __init__(self, personalities_dir: Path):
         self.personalities_dir = Path(personalities_dir)
 
+    def list(self) -> list[dict]:
+        if not self.personalities_dir.exists():
+            return []
+        presets = []
+        for path in sorted(self.personalities_dir.glob("*.json")):
+            data = json.loads(path.read_text(encoding="utf-8"))
+            presets.append(data)
+        return presets
+
     def load(self, persona_id: str | None) -> tuple[dict[str, float], list[CoreRef], dict]:
         if not persona_id:
             return {}, [], {}

@@ -35,6 +35,7 @@ For development and tests:
 
 ```bash
 pip install -e ".[dev]"
+npm install
 ```
 
 ### 2. Choose a model backend
@@ -129,6 +130,28 @@ curl http://127.0.0.1:8787/v1/chat/completions \
   }'
 ```
 
+### 7. Run the workbench UI
+
+Start the API:
+
+```bash
+personality-core serve --host 127.0.0.1 --port 8787
+```
+
+Start the Vite app:
+
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://127.0.0.1:5173
+```
+
+The workbench loads cores and personality presets from the API, runs compare jobs through `/v1/compare`, and shows resolved traits, per-core scores, core trace, warnings, and model output.
+
 ## Python client example
 
 ```python
@@ -166,6 +189,8 @@ personality-core compare "Explain retry loops like I am debugging production."
 personality-core compare --demo code_review --summary
 personality-core compare --demo retry_loop --json
 personality-core test --model ollama/gemma4:e4b --cores technical_core:0.95,sarcasm_core:0.7 --turns 3
+npm run dev
+npm run build
 ```
 
 ## Configuration

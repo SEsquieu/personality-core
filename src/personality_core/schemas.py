@@ -29,6 +29,15 @@ class ChatCompletionRequest(BaseModel):
     think: bool | str | None = False
     stream: bool = False
 
+class CompareRequest(BaseModel):
+    model: str
+    prompt: str
+    personalities: list[str] = Field(default_factory=list)
+    max_tokens: int | None = 300
+    temperature: float | None = None
+    think: bool | str | None = False
+    stabilizer: StabilizerConfig | bool | None = None
+
 class CoreDefinition(BaseModel):
     id: str
     name: str
